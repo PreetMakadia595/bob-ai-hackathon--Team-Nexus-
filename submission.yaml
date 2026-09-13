@@ -9,51 +9,53 @@
 # =============================================================================
 
 team:
-  name: ""                             # REQUIRED — e.g., "Orion Squad"
-  track: ""                            # REQUIRED — one of: AI | DevOps | Sustainability | Open
+  name: "Team Nexus"                             # REQUIRED — e.g., "Orion Squad"
+  track: "Open"                                  # REQUIRED — one of: AI | DevOps | Sustainability | Open
   lead:
-    name: ""                           # REQUIRED — e.g., "Alice Chen"
-    email: ""                          # REQUIRED — e.g., "alice.chen@ibm.com"
+    name: "Preet Makadia"                        # REQUIRED — e.g., "Alice Chen"
+    email: "24it044@charusat.edu.in"             # REQUIRED — e.g., "alice.chen@ibm.com"
   members:
-    - name: ""                         # REQUIRED — Team member 1
+    - name: "Ronak Chhaniyara"                   # REQUIRED — Team member 1
+      email: "ronakchhaniyara@gmail.com"
+    - name: "Jeel Parsaniya"                     # Team member 2
       email: ""
-    - name: ""                         # Add more members by copying the two lines above
-      email: ""
-    - name: ""
+    - name: "Yaman Ladani"                       # Team member 3
       email: ""
 
 submission:
-  title: ""                            # REQUIRED — Project display name, e.g., "SmartOps Dashboard"
+  title: "FleetFlow - Smart Fleet Management System"  # REQUIRED — Project display name
 
-  problem_statement: >                 # REQUIRED — 1-3 sentences. What problem? Who has it?
-    Replace this text with a concise description of the real-world problem
-    your project addresses and who experiences it.
+  problem_statement: >                           # REQUIRED — 1-3 sentences.
+    Fleet operators face significant challenges in tracking vehicle availability,
+    monitoring maintenance schedules, optimizing fuel consumption, and coordinating
+    trip assignments across multiple drivers.
 
-  solution_summary: >                  # REQUIRED — 1-3 sentences. What did you build?
-    Replace this text with a clear description of your solution
-    and how it addresses the problem above.
+  solution_summary: >                            # REQUIRED — 1-3 sentences.
+    FleetFlow is a unified, real-time fleet management platform built with Next.js
+    and Supabase providing complete operational visibility across vehicles, drivers,
+    trips, maintenance logs, and fuel expenditures.
 
-  key_features:                        # REQUIRED — List 3 to 5 specific features you implemented
-    - ""                               # e.g., "Real-time pipeline anomaly detection using watsonx.ai"
-    - ""
-    - ""
-    - ""                               # optional 4th
-    - ""                               # optional 5th
+  key_features:                                  # REQUIRED — List 3 to 5 specific features
+    - "Real-Time Fleet Overview & Dynamic Operational Dashboard"
+    - "Vehicle Lifecycle & Status Registry (Available, In Service, Maintenance)"
+    - "Trip Dispatch & Driver Assignment Workflow"
+    - "Preventive Maintenance Scheduling & Cost Logging"
+    - "Fuel Expense Logging & Efficiency Metrics (km/L)"
 
   tech_stack:
-    languages: []                      # REQUIRED — e.g., ["Python", "TypeScript"]
-    frameworks: []                     # e.g., ["FastAPI", "React"]
-    ibm_technologies: []               # e.g., ["watsonx.ai", "IBM Bob", "IBM Cloud Functions"]
-    databases: []                      # e.g., ["PostgreSQL", "Redis"]
-    other: []                          # e.g., ["Docker", "GitHub Actions", "Slack API"]
+    languages: ["JavaScript", "SQL"]             # REQUIRED
+    frameworks: ["Next.js", "React"]
+    ibm_technologies: []
+    databases: ["PostgreSQL", "Supabase"]
+    other: ["Tailwind CSS", "Recharts", "Lucide React"]
 
-  what_we_are_most_proud_of: >         # Optional but recommended — guides judges to your best work
-    Replace with what aspect of the submission you consider strongest
-    and want judges to pay special attention to.
+  what_we_are_most_proud_of: >
+    Modular Next.js 16 App Router architecture paired with Supabase for real-time reactivity
+    and robust role-based access control protecting fleet operations workflows.
 
-  known_limitations: >                 # Optional but recommended — be honest about gaps
-    Replace with any known limitations, incomplete features,
-    or shortcuts taken due to time constraints.
+  known_limitations: >
+    Real-time GPS device telemetry integration requires hardware IoT gateway integration;
+    offline-first caching with automatic sync is in active development.
 
 # =============================================================================
 # ARTIFACT LOCATIONS

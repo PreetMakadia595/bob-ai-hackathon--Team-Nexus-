@@ -1,6 +1,6 @@
-# 🚀 [Your Project Title Here]
+# 🚀 FleetFlow - Smart Fleet Management System
 
-> ⚠️ **Replace everything in `[ ]` brackets with your actual content before submission.**
+Comprehensive, real-time fleet operations and logistics management platform designed for modern transport and dispatch workflows.
 
 ---
 
@@ -8,36 +8,34 @@
 
 | Field | Value |
 |---|---|
-| **Team Name** | [Team Nexus] |
-| **Track** | [AI / DevOps / Sustainability / Open] |
-| **Team Lead** | [Preet Makadia] — [24it044@charusat.edu.in] |
-| **Members** | [Ronak Chhaniyara], [Jeel Parsaniya], [Yaman Ladani] |
+| **Team Name** | Team Nexus |
+| **Track** | Open |
+| **Team Lead** | Preet Makadia — [24it044@charusat.edu.in] |
+| **Members** | Ronak Chhaniyara, Jeel Parsaniya, Yaman Ladani |
 
 ---
 
 ## 🎯 Problem Statement
 
-> In 2–3 sentences: What problem does your project solve? Who experiences this problem?
-
-[Describe the real-world problem your project addresses. Be specific about who the user is and what pain point they face.]
+Fleet operators face significant challenges in tracking vehicle availability, monitoring maintenance schedules, optimizing fuel consumption, and coordinating trip assignments across multiple drivers. Fragmented tools lead to vehicle downtime, unexpected maintenance costs, delayed shipments, and inefficient fuel utilization.
 
 ---
 
 ## 💡 Solution
 
-> In 2–3 sentences: What did you build? How does it solve the problem above?
-
-[Describe your solution clearly. Explain the core mechanism — what makes it work.]
+**FleetFlow** is a unified, real-time fleet management platform built with Next.js and Supabase. It provides complete operational visibility across vehicles, drivers, trips, maintenance logs, and fuel expenditures. Featuring role-based access control, interactive operational analytics, and automated status management, FleetFlow streamlines fleet dispatch and resource planning.
 
 ---
 
 ## ✨ Key Features
 
-- **Feature 1:** [Brief description — e.g., "Real-time anomaly detection using watsonx.ai"]
-- **Feature 2:** [Brief description]
-- **Feature 3:** [Brief description]
-- **Feature 4:** [Optional]
-- **Feature 5:** [Optional]
+- **Real-Time Fleet Overview:** Interactive dashboard monitoring active trips, available vehicles, fuel consumption trends, and pending maintenance alerts.
+- **Vehicle Lifecycle & Status Management:** Full vehicle registry tracking status (Available, In Service, Maintenance), specifications, and operational metrics.
+- **Trip Dispatch & Driver Assignment:** End-to-end trip workflow from dispatch to completion with driver assignment and route details.
+- **Maintenance Tracking & Scheduling:** Preventative and reactive maintenance logging, cost tracking, and vehicle status synchronization.
+- **Fuel Expense & Efficiency Logging:** Track fuel purchases, odometer readings, fuel efficiency (km/L), and associated operational costs.
+- **Operational Analytics:** Visual data insights powered by Recharts covering expense breakdowns, vehicle utilization, and trip completion rates.
+- **Role-Based Access Control (RBAC):** Secure authentication and granular permissions for fleet managers, dispatchers, and operators.
 
 ---
 
@@ -45,51 +43,78 @@
 
 | Category | Technologies |
 |---|---|
-| **Languages** | [e.g., Python, TypeScript] |
-| **Frameworks** | [e.g., FastAPI, React] |
-| **IBM Technologies** | [e.g., watsonx.ai, IBM Bob, IBM Cloud] |
-| **Databases** | [e.g., PostgreSQL, Redis] |
-| **Other** | [e.g., Docker, GitHub Actions] |
+| **Languages** | JavaScript (ES6+), SQL |
+| **Frameworks** | Next.js 16 (App Router), React 19 |
+| **Styling** | Tailwind CSS 4, Lucide React Icons |
+| **Databases & Backend** | Supabase (PostgreSQL, Auth, Real-time) |
+| **Visualization** | Recharts |
+| **Linting & Tooling** | ESLint, PostCSS |
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-├── src/                  # All source code
-├── docs/                 # Written documentation
-│   ├── problem-statement.md
-│   ├── solution-overview.md
-│   ├── architecture.md
-│   └── setup-guide.md
-├── demo/                 # Demo artifacts
-│   ├── screenshots/      # App screenshots
-│   └── demo-video-link.txt  # Link to demo video
-├── presentation/         # Slide deck
-└── submission.yaml       # Structured submission metadata
+├── .github/              # GitHub Actions workflows & issue templates
+├── demo/                 # Demo artifacts (video link, screenshots)
+├── docs/                 # Hackathon documentation
+├── presentation/         # Presentation slide deck
+├── public/               # Static assets & icons
+├── src/
+│   ├── app/              # Next.js App Router pages & layouts
+│   │   ├── (dashboard)/  # Main dashboard, vehicles, trips, fuel, maintenance
+│   │   ├── 403/          # Unauthorized access page
+│   │   └── login/        # Authentication page
+│   ├── components/       # Reusable UI components & navigation
+│   ├── lib/              # Supabase client, auth context, RBAC & utilities
+│   └── middleware.js     # Route protection & auth middleware
+├── add_fuel_columns.sql          # Database schema migrations
+├── add_maintenance_columns.sql
+├── add_trip_columns.sql
+├── add_vehicle_columns.sql
+├── package.json          # Project dependencies & scripts
+└── submission.yaml       # Hackathon submission metadata
 ```
 
 ---
 
 ## ⚡ How to Run
 
-> **Copy these exact steps from your [`docs/setup-guide.md`](docs/setup-guide.md)**
-
+### 1. Clone the repository
 ```bash
-# 1. Clone the repo
-git clone https://github.com/[your-repo].git
-cd [your-repo]
-
-# 2. Install dependencies
-[your install command here]
-
-# 3. Configure environment
-cp .env.example .env
-# Edit .env with your values
-
-# 4. Run the project
-[your run command here]
+git clone https://github.com/PreetMakadia595/bob-ai-hackathon--Team-Nexus-.git
+cd bob-ai-hackathon--Team-Nexus-
 ```
+
+### 2. Install dependencies
+```bash
+npm install
+```
+
+### 3. Configure environment variables
+Create a `.env.local` file in the root directory:
+```bash
+cp .env.example .env.local
+```
+Add your Supabase credentials:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+### 4. Setup Database Schema
+Execute the SQL migration scripts in your Supabase SQL editor in the following order:
+- `add_vehicle_columns.sql`
+- `add_trip_columns.sql`
+- `add_fuel_columns.sql`
+- `add_maintenance_columns.sql`
+
+### 5. Run the development server
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to explore FleetFlow.
 
 ---
 
@@ -106,16 +131,13 @@ cp .env.example .env
 
 ## ⚠️ Known Limitations
 
-> Be honest — judges appreciate transparency over overclaiming.
-
-- [Limitation 1: e.g., "Authentication is mocked — not production-ready"]
-- [Limitation 2: e.g., "Only tested on Chrome"]
-- [Limitation 3: e.g., "Feature X is scaffolded but not fully implemented"]
+- Real-time GPS device telemetry integration requires hardware IoT gateway integration.
+- Offline-first caching with automatic sync is in active development.
 
 ---
 
 ## 🏅 What We're Most Proud Of
 
-[Tell the judges what part of your submission is strongest and worth paying close attention to.]
-
----
+- Clean, modular Next.js 16 App Router architecture paired with Supabase for real-time reactivity.
+- Seamless role-based access control protecting fleet operations workflows and sensitive operational logs.
+- Intuitive, high-performance UI tailored for rapid dispatch and fleet monitoring.

@@ -71,6 +71,7 @@ desktop.ini
 # ── IDEs & Editors ────────────────────────────────────────────────────────────
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 *.sublime-project
