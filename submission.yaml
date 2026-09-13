@@ -23,24 +23,24 @@ team:
       email: ""
 
 submission:
-  title: "FleetFlow - Smart Fleet Management System"  # REQUIRED — Project display name
+  title: "FleetFlow L2 - Supply Chain Disruption Assistant & Fleet Utilization Optimizer"  # REQUIRED
 
   problem_statement: >                           # REQUIRED — 1-3 sentences.
-    Fleet operators face significant challenges in tracking vehicle availability,
-    monitoring maintenance schedules, optimizing fuel consumption, and coordinating
-    trip assignments across multiple drivers.
+    Unpredictable supply chain disruptions such as extreme weather, terminal strikes,
+    and corridor blockages leave active shipments stranded and idle assets misallocated,
+    while undetected cold chain temperature breaches cause catastrophic pharmaceutical and perishable cargo loss.
 
   solution_summary: >                            # REQUIRED — 1-3 sentences.
-    FleetFlow is a unified, real-time fleet management platform built with Next.js
-    and Supabase providing complete operational visibility across vehicles, drivers,
-    trips, maintenance logs, and fuel expenditures.
+    FleetFlow L2 is an intelligent fleet management platform featuring an automated disruption
+    impact and rerouting engine, multi-variable idle asset redeployment scoring, and real-time
+    IoT cold chain monitoring with automatic regulatory compliance and excursion detection.
 
   key_features:                                  # REQUIRED — List 3 to 5 specific features
-    - "Real-Time Fleet Overview & Dynamic Operational Dashboard"
-    - "Vehicle Lifecycle & Status Registry (Available, In Service, Maintenance)"
-    - "Trip Dispatch & Driver Assignment Workflow"
-    - "Preventive Maintenance Scheduling & Cost Logging"
-    - "Fuel Expense Logging & Efficiency Metrics (km/L)"
+    - "Disruption Command Panel with Corridor Impact Matching & One-Click Rerouting"
+    - "Idle Fleet Redeployment Optimizer with Multi-Factor Demand Priority Scoring"
+    - "Real-Time Cold Chain IoT Telemetry & Automated Excursion Severity Detection"
+    - "Real-Time Command Center Integrating L2 Risk KPIs with Core Fleet Metrics"
+    - "Granular Role-Based Access Control (RBAC) for Managers, Dispatchers, and Safety Officers"
 
   tech_stack:
     languages: ["JavaScript", "SQL"]             # REQUIRED
@@ -50,12 +50,12 @@ submission:
     other: ["Tailwind CSS", "Recharts", "Lucide React"]
 
   what_we_are_most_proud_of: >
-    Modular Next.js 16 App Router architecture paired with Supabase for real-time reactivity
-    and robust role-based access control protecting fleet operations workflows.
+    Seamlessly integrating auditable, rule-based disruption analysis and cold chain regulatory compliance
+    directly on top of live fleet dispatch without disrupting existing core workflows.
 
   known_limitations: >
-    Real-time GPS device telemetry integration requires hardware IoT gateway integration;
-    offline-first caching with automatic sync is in active development.
+    Direct hardware IoT gateway streaming currently relies on web-based telemetry simulation;
+    offline edge synchronization for remote cellular dead zones is planned for subsequent releases.
 
 # =============================================================================
 # ARTIFACT LOCATIONS

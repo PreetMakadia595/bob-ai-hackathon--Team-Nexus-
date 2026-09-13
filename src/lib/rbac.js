@@ -4,9 +4,9 @@
  * '/' (dashboard root) is always included for all roles.
  */
 export const ROLE_ROUTES = {
-  manager:    ['/', '/vehicles', '/drivers', '/trips', '/maintenance', '/fuel', '/analytics'],
-  dispatcher: ['/', '/vehicles', '/trips'],
-  safety:     ['/', '/drivers', '/maintenance'],
+  manager:    ['/', '/vehicles', '/drivers', '/trips', '/maintenance', '/fuel', '/analytics', '/disruptions', '/cold-chain', '/redeployment'],
+  dispatcher: ['/', '/vehicles', '/trips', '/disruptions'],
+  safety:     ['/', '/drivers', '/maintenance', '/cold-chain'],
   finance:    ['/', '/fuel', '/analytics'],
 };
 

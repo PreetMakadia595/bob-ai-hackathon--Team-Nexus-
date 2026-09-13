@@ -1,12 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import KPICard from '@/components/KPICard';
 import StatusBadge from '@/components/StatusBadge';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import {
   Truck, Users, AlertTriangle, Package,
-  Activity, BarChart2, TrendingUp, Clock
+  Activity, BarChart2, TrendingUp, Clock,
+  ShieldAlert, RefreshCw, Thermometer, ArrowRight
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -17,20 +19,36 @@ export default function DashboardPage() {
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [trips, setTrips] = useState([]);
+  const [activeDisruptionsCount, setActiveDisruptionsCount] = useState(0);
+  const [impactedShipmentsCount, setImpactedShipmentsCount] = useState(0);
+  const [openExcursionsCount, setOpenExcursionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('All');
   const [regionFilter, setRegionFilter] = useState('All');
 
   const fetchData = async () => {
     setLoading(true);
-    const [{ data: v }, { data: d }, { data: t }] = await Promise.all([
-      supabase.from('vehicles').select('*'),
-      supabase.from('drivers').select('*'),
-      supabase.from('trips').select('*, vehicles(model, license_plate), drivers(name)').limit(5),
-    ]);
-    setVehicles(v || []);
-    setDrivers(d || []);
-    setTrips(t || []);
+    try {
+      const [
+        { data: v }, { data: d }, { data: t },
+        { data: dis }, { data: imp }, { data: exc }
+      ] = await Promise.all([
+        supabase.from('vehicles').select('*'),
+        supabase.from('drivers').select('*'),
+        supabase.from('trips').select('*, vehicles(model, license_plate), drivers(name)').limit(5),
+        supabase.from('disruptions').select('id').eq('status', 'active'),
+        supabase.from('shipment_disruption_impact').select('id').neq('impact_level', 'low'),
+        supabase.from('temperature_excursions').select('id').eq('status', 'open'),
+      ]);
+      setVehicles(v || []);
+      setDrivers(d || []);
+      setTrips(t || []);
+      setActiveDisruptionsCount(dis?.length || 0);
+      setImpactedShipmentsCount(imp?.length || 0);
+      setOpenExcursionsCount(exc?.length || 0);
+    } catch (e) {
+      console.warn('Dashboard fetch notice:', e);
+    }
     setLoading(false);
   };
 
@@ -155,6 +173,88 @@ export default function DashboardPage() {
           icon={Package}
           color="#eab308"
         />
+      </div>
+
+      {/* L2 Supply Chain & Cold Chain Operations */}
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '14px', flexWrap: 'wrap', gap: '8px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
+              Supply Chain & Cold Chain Operations
+            </h3>
+            <span style={{
+              fontSize: '10px', fontWeight: '800', background: 'rgba(59,130,246,0.15)',
+              color: '#3b82f6', padding: '2px 8px', borderRadius: '6px', letterSpacing: '0.05em'
+            }}>
+              L2 INTELLIGENCE
+            </span>
+          </div>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Real-time disruption mitigation & cold chain compliance
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px', marginBottom: '14px' }}>
+          <KPICard
+            title="Active Disruptions"
+            value={activeDisruptionsCount}
+            subtitle="Extreme weather & strikes"
+            icon={AlertTriangle}
+            color="#ef4444"
+          />
+          <KPICard
+            title="Shipments Impacted"
+            value={impactedShipmentsCount}
+            subtitle="Actionable reroutes/delays"
+            icon={ShieldAlert}
+            color="#f97316"
+          />
+          <KPICard
+            title="Idle Assets"
+            value={vehicles.filter(v => v.status === 'Available').length}
+            subtitle="Ready for redeployment"
+            icon={RefreshCw}
+            color="#3b82f6"
+          />
+          <KPICard
+            title="Open Excursions"
+            value={openExcursionsCount}
+            subtitle="Cold chain threshold alerts"
+            icon={Thermometer}
+            color="#06b6d4"
+          />
+        </div>
+
+        {/* Quick Nav Links */}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <Link
+            href="/disruptions"
+            className="btn btn-sm btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 14px' }}
+          >
+            <span>Disruption Command Panel</span>
+            <ArrowRight size={12} />
+          </Link>
+          <Link
+            href="/redeployment"
+            className="btn btn-sm btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 14px' }}
+          >
+            <span>Fleet Redeployment Optimizer</span>
+            <ArrowRight size={12} />
+          </Link>
+          <Link
+            href="/cold-chain"
+            className="btn btn-sm btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 14px' }}
+          >
+            <span>Cold Chain Telemetry</span>
+            <ArrowRight size={12} />
+          </Link>
+        </div>
       </div>
 
       {/* Charts Row */}

@@ -1,13 +1,16 @@
 'use client';
 
 const ICONS = {
-  vehicles:    '🚛',
-  drivers:     '👥',
-  trips:       '🗺️',
-  maintenance: '🔧',
-  fuel:        '⛽',
-  analytics:   '📊',
-  default:     '📭',
+  vehicles:     '🚛',
+  drivers:      '👥',
+  trips:        '🗺️',
+  maintenance:  '🔧',
+  fuel:         '⛽',
+  analytics:    '📊',
+  disruptions:  '⚡',
+  redeployment: '🔄',
+  'cold-chain': '🌡️',
+  default:      '📭',
 };
 
 export default function EmptyState({ type = 'default', title, description, action }) {

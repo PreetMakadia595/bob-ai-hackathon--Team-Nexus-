@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Truck, Users, Route,
   Wrench, Fuel, BarChart2, ChevronRight,
-  Zap
+  Zap, AlertTriangle, RefreshCw, Thermometer
 } from 'lucide-react';
 
 const navItems = [
@@ -15,6 +15,12 @@ const navItems = [
   { href: '/maintenance', label: 'Maintenance', icon: Wrench },
   { href: '/fuel', label: 'Fuel & Expenses', icon: Fuel },
   { href: '/analytics', label: 'Analytics', icon: BarChart2 },
+];
+
+const l2NavItems = [
+  { href: '/disruptions', label: 'Disruptions', icon: AlertTriangle },
+  { href: '/redeployment', label: 'Redeployment', icon: RefreshCw },
+  { href: '/cold-chain', label: 'Cold Chain', icon: Thermometer },
 ];
 
 export default function Sidebar() {
@@ -82,6 +88,68 @@ export default function Sidebar() {
           Navigation
         </p>
         {navItems.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
+          return (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                marginBottom: '2px',
+                textDecoration: 'none',
+                fontSize: '14px',
+                fontWeight: isActive ? '600' : '500',
+                color: isActive ? 'white' : 'var(--text-secondary)',
+                background: isActive
+                  ? 'linear-gradient(135deg, #3b82f6, #2563eb)'
+                  : 'transparent',
+                boxShadow: isActive ? '0 4px 12px rgba(59,130,246,0.3)' : 'none',
+                transition: 'all 0.15s ease',
+                position: 'relative',
+              }}
+              onMouseEnter={e => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'var(--bg-hover)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }
+              }}
+            >
+              <Icon size={18} style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>{label}</span>
+              {isActive && <ChevronRight size={14} style={{ opacity: 0.7 }} />}
+            </Link>
+          );
+        })}
+
+        {/* L2 Operations Section */}
+        <p style={{
+          fontSize: '10px',
+          fontWeight: '700',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          color: 'var(--text-muted)',
+          padding: '16px 10px 8px',
+          marginBottom: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span>L2 Operations</span>
+          <span style={{ fontSize: '9px', background: 'rgba(59,130,246,0.15)', color: '#3b82f6', padding: '1px 6px', borderRadius: '4px', fontWeight: '800' }}>
+            OPTIMIZER
+          </span>
+        </p>
+        {l2NavItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
           return (
             <Link

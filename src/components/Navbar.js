@@ -12,6 +12,9 @@ const pageTitles = {
   '/maintenance': 'Maintenance Logs',
   '/fuel': 'Fuel & Expenses',
   '/analytics': 'Analytics & Reports',
+  '/disruptions': 'Disruption Command Panel',
+  '/redeployment': 'Fleet Redeployment',
+  '/cold-chain': 'Cold Chain Monitoring',
 };
 
 const roleColors = {
