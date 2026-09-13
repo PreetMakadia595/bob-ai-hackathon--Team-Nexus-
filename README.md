@@ -8,10 +8,10 @@
 
 | Field | Value |
 |---|---|
-| **Team Name** | [Your Team Name] |
+| **Team Name** | [Team Nexus] |
 | **Track** | [AI / DevOps / Sustainability / Open] |
-| **Team Lead** | [Name] — [email@ibm.com] |
-| **Members** | [Name 1], [Name 2], [Name 3] |
+| **Team Lead** | [Preet Makadia] — [24it044@charusat.edu.in] |
+| **Members** | [Ronak Chhaniyara], [Jeel Parsaniya], [Yaman Ladani] |
 
 ---
 
