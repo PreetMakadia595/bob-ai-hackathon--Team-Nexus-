@@ -23,7 +23,7 @@ team:
       email: ""
 
 submission:
-  title: "FleetFlow L2 - Supply Chain Disruption Assistant & Fleet Utilization Optimizer"  # REQUIRED
+  title: "SupplyShield L2 - Supply Chain Disruption Assistant & Fleet Utilization Optimizer"  # REQUIRED
 
   problem_statement: >                           # REQUIRED — 1-3 sentences.
     Unpredictable supply chain disruptions such as extreme weather, terminal strikes,
@@ -31,7 +31,7 @@ submission:
     while undetected cold chain temperature breaches cause catastrophic pharmaceutical and perishable cargo loss.
 
   solution_summary: >                            # REQUIRED — 1-3 sentences.
-    FleetFlow L2 is an intelligent fleet management platform featuring an automated disruption
+    SupplyShield L2 is an intelligent fleet management platform featuring an automated disruption
     impact and rerouting engine, multi-variable idle asset redeployment scoring, and real-time
     IoT cold chain monitoring with automatic regulatory compliance and excursion detection.
 

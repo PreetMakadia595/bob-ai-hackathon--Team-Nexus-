@@ -1,5 +1,5 @@
 -- =============================================================================
--- FleetFlow L2: Rich Demonstration & Showcase Seed Data
+-- SupplyShield L2: Rich Demonstration & Showcase Seed Data
 -- =============================================================================
 -- Run AFTER 001_l2_supply_chain_tables.sql or complete_database_setup.sql
 -- =============================================================================

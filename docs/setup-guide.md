@@ -1,6 +1,6 @@
-# FleetFlow L2 — Setup & Deployment Guide
+# SupplyShield L2 — Setup & Deployment Guide
 
-> **Official Setup Guide for FleetFlow & the L2 Supply Chain Disruption / Cold Chain Extension.**
+> **Official Setup Guide for SupplyShield & the L2 Supply Chain Disruption / Cold Chain Extension.**
 
 ---
 

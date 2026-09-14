@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Truck, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { Truck, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,17 +11,28 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const isConfigured = isSupabaseConfigured();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!isSupabaseConfigured()) {
+      setError('Supabase is not configured. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local and restart the dev server.');
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       window.location.href = '/';
     } catch (err) {
-      setError(err.message || 'Login failed. Please try again.');
+      if (err.name === 'TypeError' || err.message?.toLowerCase().includes('failed to fetch')) {
+        setError('Cannot connect to Supabase. Please verify your NEXT_PUBLIC_SUPABASE_URL in .env.local and internet connection.');
+      } else {
+        setError(err.message || 'Login failed. Please try again.');
+      }
       setLoading(false);
     }
   };
@@ -29,13 +40,28 @@ export default function LoginPage() {
   const handleReset = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!isSupabaseConfigured()) {
+      setError('Supabase is not configured. Please add your credentials to .env.local.');
+      return;
+    }
+
     setLoading(true);
-    // Always show success — never reveal whether an email is registered (prevents enumeration)
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setLoading(false);
-    setResetSent(true);
+    try {
+      // Always show success — never reveal whether an email is registered (prevents enumeration)
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      setResetSent(true);
+    } catch (err) {
+      if (err.name === 'TypeError' || err.message?.toLowerCase().includes('failed to fetch')) {
+        setError('Cannot connect to Supabase. Please verify your NEXT_PUBLIC_SUPABASE_URL in .env.local.');
+      } else {
+        setError(err.message || 'Password reset request failed.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const goToForgot = () => { setForgotMode(true); setError(''); setResetSent(false); };
@@ -89,7 +115,7 @@ export default function LoginPage() {
             <Truck size={32} color="white" />
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: '800', letterSpacing: '-0.02em' }}>
-            Fleet<span className="gradient-text">Flow</span>
+            Supply<span className="gradient-text">Shield</span>
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px' }}>
             Fleet & Logistics Management System
@@ -112,6 +138,37 @@ export default function LoginPage() {
               ? "Enter your email and we'll send you a reset link."
               : 'Enter your credentials to access the dashboard'}
           </p>
+
+          {!isConfigured && (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: '10px',
+              padding: '12px 16px',
+              marginBottom: '20px',
+              color: '#fbbf24',
+              fontSize: '13px',
+              lineHeight: '1.5',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', marginBottom: '4px' }}>
+                <AlertCircle size={16} /> Supabase Setup Required
+              </div>
+              <p style={{ margin: 0, fontSize: '12px', color: '#fde68a' }}>
+                Create a <code>.env.local</code> file with your Supabase credentials and restart <code>npm run dev</code>:
+              </p>
+              <pre style={{
+                marginTop: '8px',
+                marginBottom: 0,
+                padding: '8px',
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: '6px',
+                fontSize: '11px',
+                color: '#e2e8f0',
+                overflowX: 'auto',
+                fontFamily: 'monospace',
+              }}>NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co&#10;NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key</pre>
+            </div>
+          )}
 
           {error && (
             <div style={{
@@ -222,7 +279,7 @@ export default function LoginPage() {
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '20px', color: 'var(--text-muted)', fontSize: '13px' }}>
-          © 2026 FleetFlow. All rights reserved.
+          © 2026 SupplyShield. All rights reserved.
         </p>
       </div>
     </div>

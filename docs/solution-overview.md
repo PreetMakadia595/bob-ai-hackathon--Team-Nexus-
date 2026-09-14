@@ -1,9 +1,9 @@
-# Solution Overview: FleetFlow L2 Disruption & Cold Chain Optimizer
+# Solution Overview: SupplyShield L2 Disruption & Cold Chain Optimizer
 
 ## 1. What We Built
-**FleetFlow L2** is an intelligent extension to the FleetFlow fleet management system. It introduces an automated **Supply Chain Disruption Assistant**, an algorithmic **Fleet Redeployment Optimizer**, and a real-time **Cold Chain Telemetry & Excursion Management System**.
+**SupplyShield L2** is an intelligent extension to the SupplyShield fleet management system. It introduces an automated **Supply Chain Disruption Assistant**, an algorithmic **Fleet Redeployment Optimizer**, and a real-time **Cold Chain Telemetry & Excursion Management System**.
 
-Built additively on top of FleetFlow's proven Next.js 16 and Supabase foundation, it equips operators with automated risk detection, proactive rerouting recommendations, and regulatory-grade temperature oversight.
+Built additively on top of SupplyShield's proven Next.js 16 and Supabase foundation, it equips operators with automated risk detection, proactive rerouting recommendations, and regulatory-grade temperature oversight.
 
 ---
 

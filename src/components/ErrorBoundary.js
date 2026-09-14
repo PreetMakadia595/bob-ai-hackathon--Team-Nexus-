@@ -13,7 +13,7 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('[FleetFlow ErrorBoundary]', error, info);
+    console.error('[SupplyShield ErrorBoundary]', error, info);
   }
 
   handleReset() {

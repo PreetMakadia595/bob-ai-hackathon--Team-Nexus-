@@ -1,4 +1,4 @@
--- FleetFlow: Add missing columns to vehicles table
+-- SupplyShield: Add missing columns to vehicles table
 -- Run this in: Supabase Dashboard → SQL Editor → New Query → Paste & Run
 
 ALTER TABLE vehicles

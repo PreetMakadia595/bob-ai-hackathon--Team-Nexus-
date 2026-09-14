@@ -1,4 +1,4 @@
-# 🚀 FleetFlow — Smart Fleet Management & L2 Supply Chain Disruption Optimizer
+# 🚀 SupplyShield — Smart Fleet Management & L2 Supply Chain Disruption Optimizer
 
 A comprehensive, real-time fleet operations and logistics management platform, extended with the **L2 Supply Chain Disruption Assistant, Fleet Redeployment Optimizer, and Cold Chain Telemetry System**.
 
@@ -21,9 +21,9 @@ Fleet operators face severe operational vulnerabilities when unexpected transit 
 
 ---
 
-## 💡 Solution: FleetFlow L2
+## 💡 Solution: SupplyShield L2
 
-**FleetFlow L2** is an enterprise-grade, real-time fleet management platform built with **Next.js 16 (App Router)** and **Supabase (PostgreSQL + Realtime WebSockets)**. It combines core fleet lifecycle management with proactive supply chain disruption intelligence:
+**SupplyShield L2** is an enterprise-grade, real-time fleet management platform built with **Next.js 16 (App Router)** and **Supabase (PostgreSQL + Realtime WebSockets)**. It combines core fleet lifecycle management with proactive supply chain disruption intelligence:
 
 1. **Disruption Command Panel:** Real-time event tracking, corridor intersection analysis, and automated shipment rerouting recommendations with one-click dispatch acceptance.
 2. **Fleet Redeployment Optimizer:** Algorithmic scoring (0–100) of idle assets based on idle hours, regional demand pressures, and vehicle capacity to balance fleet distribution.

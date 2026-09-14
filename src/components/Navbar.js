@@ -29,7 +29,7 @@ export default function Navbar({ user, role }) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
 
-  const title = pageTitles[pathname] || 'FleetFlow';
+  const title = pageTitles[pathname] || 'SupplyShield';
   const email = user?.email || 'User';
   const initials = email.substring(0, 2).toUpperCase();
   const roleColor = roleColors[role] || '#3b82f6';

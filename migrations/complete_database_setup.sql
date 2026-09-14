@@ -1,5 +1,5 @@
 -- =============================================================================
--- FleetFlow & L2 Supply Chain Optimizer: COMPLETE DATABASE SETUP SCRIPT
+-- SupplyShield & L2 Supply Chain Optimizer: COMPLETE DATABASE SETUP SCRIPT
 -- =============================================================================
 -- Instructions:
 -- 1. Open your Supabase Dashboard: https://supabase.com/dashboard

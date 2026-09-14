@@ -28,7 +28,7 @@ if (!supabaseUrl || !serviceRoleKey) {
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 async function seed() {
-  console.log('Seeding rich demonstration data for FleetFlow L2...');
+  console.log('Seeding rich demonstration data for SupplyShield L2...');
 
   // 1. Clear existing sample records
   await supabase.from('temperature_excursions').delete().neq('id', '00000000-0000-0000-0000-000000000000');

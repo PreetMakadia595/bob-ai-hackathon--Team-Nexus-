@@ -1,4 +1,4 @@
--- FleetFlow: Add missing columns to maintenance_logs table
+-- SupplyShield: Add missing columns to maintenance_logs table
 -- Run this in: Supabase Dashboard → SQL Editor → New Query → Paste & Run
 
 ALTER TABLE maintenance_logs

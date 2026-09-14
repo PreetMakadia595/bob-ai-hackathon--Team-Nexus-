@@ -63,14 +63,14 @@ export default function Sidebar() {
         </div>
         <div>
           <div style={{ fontSize: '17px', fontWeight: '800', letterSpacing: '-0.02em', lineHeight: 1 }}>
-            Fleet<span style={{
+            Supply<span style={{
               background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
-            }}>Flow</span>
+            }}>Shield</span>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Fleet Management</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Supply & Fleet Management</div>
         </div>
       </div>
 

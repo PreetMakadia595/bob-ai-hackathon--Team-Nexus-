@@ -1,4 +1,4 @@
--- FleetFlow: Add odometer reading column to fuel_logs table
+-- SupplyShield: Add odometer reading column to fuel_logs table
 -- Run this in: Supabase Dashboard → SQL Editor → New Query → Paste & Run
 
 ALTER TABLE fuel_logs

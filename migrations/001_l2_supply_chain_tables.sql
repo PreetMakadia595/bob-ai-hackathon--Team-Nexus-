@@ -1,5 +1,5 @@
 -- =============================================================================
--- FleetFlow L2: Supply Chain Disruption + Cold Chain Tables
+-- SupplyShield L2: Supply Chain Disruption + Cold Chain Tables
 -- =============================================================================
 -- Run this in: Supabase Dashboard → SQL Editor → New Query → Paste & Run
 -- Prerequisites: Existing tables (vehicles, trips, drivers, profiles) must exist.

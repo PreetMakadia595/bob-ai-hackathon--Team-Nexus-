@@ -1,9 +1,9 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "FleetFlow — Fleet & Logistics Management",
+  title: "SupplyShield — Fleet & Logistics Management",
   description:
-    "Modern fleet management system for tracking vehicles, drivers, trips, maintenance, and fuel.",
+    "Modern fleet management and supply chain disruption optimization system for tracking vehicles, drivers, trips, cold chain, and disruptions.",
 };
 
 export default function RootLayout({ children }) {

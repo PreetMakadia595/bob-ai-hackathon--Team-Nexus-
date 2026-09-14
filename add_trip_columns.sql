@@ -1,4 +1,4 @@
--- FleetFlow: Add missing columns to trips table
+-- SupplyShield: Add missing columns to trips table
 -- Run this in: Supabase Dashboard → SQL Editor → New Query → Paste & Run
 
 ALTER TABLE trips
