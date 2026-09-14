@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Truck, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
@@ -24,9 +25,49 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      window.location.href = '/';
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (!error) {
+        window.location.href = '/';
+        return;
+      }
+
+      // If Supabase Auth returned an error (e.g. user was registered via resilient fallback or email provider is disabled):
+      if (typeof window !== 'undefined') {
+        try {
+          const registered = JSON.parse(localStorage.getItem('supplyshield_registered_users') || '[]');
+          const matched = registered.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+          if (matched) {
+            if (matched.password === password) {
+              const userSession = {
+                id: matched.id,
+                email: matched.email,
+                user_metadata: {
+                  full_name: matched.fullName || matched.email.split('@')[0],
+                  role: matched.role || 'manager',
+                },
+                role: matched.role || 'manager',
+                created_at: new Date().toISOString(),
+              };
+              localStorage.setItem('supplyshield_user_session', JSON.stringify(userSession));
+              window.location.href = '/';
+              return;
+            } else {
+              throw new Error('Invalid password for this account. Please verify your credentials.');
+            }
+          }
+        } catch (regErr) {
+          if (regErr.message?.includes('Invalid')) throw regErr;
+        }
+      }
+
+      // Check if error is Supabase provider disabled
+      if (error.message?.toLowerCase().includes('disabled')) {
+        setError('Supabase Email provider is currently disabled. You can still log in with demo accounts or accounts registered on this browser.');
+        setLoading(false);
+        return;
+      }
+
+      throw error;
     } catch (err) {
       if (err.name === 'TypeError' || err.message?.toLowerCase().includes('failed to fetch')) {
         setError('Cannot connect to Supabase. Please verify your NEXT_PUBLIC_SUPABASE_URL in .env.local and internet connection.');
@@ -248,10 +289,19 @@ export default function LoginPage() {
               style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '15px', marginTop: '4px' }}>
               {loading ? <><Loader2 size={16} style={{ animation: 'spin 0.7s linear infinite' }} /> Signing in...</> : 'Sign In'}
             </button>
+            <div style={{ textAlign: 'center', marginTop: '14px', fontSize: '13px', color: 'var(--text-muted)' }}>
+              Don&apos;t have an account?{' '}
+              <Link
+                href="/signup"
+                style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '600' }}
+              >
+                Sign Up
+              </Link>
+            </div>
           </form>
           )}
 
-          {/* Role legend */}
+          {/* Role legend & 1-click Demo Fill */}
           <div style={{
             marginTop: '28px',
             padding: '16px',
@@ -260,19 +310,52 @@ export default function LoginPage() {
             border: '1px solid var(--border-default)',
           }}>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Access Roles
+              Quick Demo Access (Click to Autofill)
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               {[
-                { role: 'Manager', color: '#3b82f6' },
-                { role: 'Dispatcher', color: '#22c55e' },
-                { role: 'Safety Officer', color: '#f97316' },
-                { role: 'Finance Analyst', color: '#a855f7' },
-              ].map(({ role, color }) => (
-                <div key={role} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color, flexShrink: 0 }} />
-                  {role}
-                </div>
+                { role: 'Manager', email: 'manager@fleetflow.com', color: '#3b82f6' },
+                { role: 'Dispatcher', email: 'dispatcher@fleetflow.com', color: '#22c55e' },
+                { role: 'Safety Officer', email: 'safety@fleetflow.com', color: '#f97316' },
+                { role: 'Finance Analyst', email: 'finance@fleetflow.com', color: '#a855f7' },
+              ].map(({ role: rName, email: rEmail, color }) => (
+                <button
+                  key={rName}
+                  type="button"
+                  onClick={() => {
+                    setEmail(rEmail);
+                    setPassword('Password123!');
+                    setError('');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12px',
+                    color: 'var(--text-secondary)',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: '8px',
+                    padding: '8px 10px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = color;
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--border-default)';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
+                >
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '11px' }}>{rName}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', opacity: 0.8 }}>Password123!</div>
+                  </div>
+                </button>
               ))}
             </div>
           </div>

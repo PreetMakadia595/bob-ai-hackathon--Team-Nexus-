@@ -17,30 +17,64 @@ export default function DashboardLayout({ children }) {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-      setUser(session.user);
-      const { data } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-      const userRole = data?.role || 'manager';
-      setRole(userRole);
+    async function checkAuth() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        let activeUser = session?.user || null;
+        let userRole = null;
 
-      // RBAC check — redirect to /403 if role can't access this route
-      if (!isAllowed(userRole, pathname)) {
-        router.replace('/403');
-        return;
+        if (activeUser) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', activeUser.id)
+            .single();
+          userRole = data?.role || activeUser.user_metadata?.role || 'manager';
+        } else if (typeof window !== 'undefined') {
+          // Check for registered user session fallback
+          const localSessionStr = localStorage.getItem('supplyshield_user_session');
+          if (localSessionStr) {
+            try {
+              const parsed = JSON.parse(localSessionStr);
+              if (parsed?.email) {
+                activeUser = parsed;
+                userRole = parsed.role || 'manager';
+              }
+            } catch (e) {}
+          }
+        }
+
+        if (!activeUser) {
+          router.push('/login');
+          return;
+        }
+
+        setUser(activeUser);
+        setRole(userRole || 'manager');
+
+        // RBAC check — redirect to /403 if role can't access this route
+        if (!isAllowed(userRole || 'manager', pathname)) {
+          router.replace('/403');
+          return;
+        }
+        setChecking(false);
+      } catch (err) {
+        console.warn('Auth check warning:', err);
+        setChecking(false);
       }
-      setChecking(false);
-    });
+    }
+
+    checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.push('/login');
+      if (!session) {
+        if (typeof window !== 'undefined') {
+          const localSession = localStorage.getItem('supplyshield_user_session');
+          if (!localSession) {
+            router.push('/login');
+          }
+        }
+      }
     });
 
     return () => subscription.unsubscribe();

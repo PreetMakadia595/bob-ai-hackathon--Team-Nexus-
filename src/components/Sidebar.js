@@ -4,8 +4,9 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Truck, Users, Route,
   Wrench, Fuel, BarChart2, ChevronRight,
-  Zap, AlertTriangle, RefreshCw, Thermometer
+  Zap, AlertTriangle, RefreshCw, Thermometer, LogOut
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -25,6 +26,19 @@ const l2NavItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('Sign out notice:', err);
+    }
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (err) {}
+    window.location.href = '/login';
+  };
 
   return (
     <aside style={{
@@ -223,6 +237,39 @@ export default function Sidebar() {
             animation: 'pulse-glow 2s infinite',
           }} />
         </div>
+
+        {/* Sign Out Button */}
+        <button
+          onClick={handleSignOut}
+          style={{
+            marginTop: '12px',
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            background: 'rgba(239, 68, 68, 0.08)',
+            color: '#ef4444',
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = '#ef4444';
+            e.currentTarget.style.color = '#ffffff';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+            e.currentTarget.style.color = '#ef4444';
+          }}
+        >
+          <LogOut size={16} />
+          <span>Sign Out</span>
+        </button>
       </div>
     </aside>
   );
