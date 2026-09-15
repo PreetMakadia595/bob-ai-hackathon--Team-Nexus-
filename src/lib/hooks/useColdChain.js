@@ -18,7 +18,7 @@ export function useColdChain() {
         trips(
           id, origin, destination, status, cargo_weight,
           vehicles(id, model, license_plate, type),
-          drivers(id, name, phone)
+          drivers(id, name)
         )
       `)
       .order('created_at', { ascending: false });

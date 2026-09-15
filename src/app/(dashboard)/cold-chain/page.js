@@ -161,8 +161,15 @@ export default function ColdChainPage() {
       }
 
       setShowSimModal(false);
-      if (selectedShipment?.id === simForm.shipment_id) {
-        await loadLogs(selectedShipment.id);
+      const targetId = simForm.shipment_id;
+      if (selectedShipment?.id === targetId) {
+        await loadLogs(targetId);
+      } else {
+        const target = shipments.find(s => s.id === targetId);
+        if (target) {
+          setSelectedShipment(target);
+          await loadLogs(target.id);
+        }
       }
     } catch (err) {
       toast.error(`Simulation failed: ${err.message}`);
@@ -327,7 +334,12 @@ export default function ColdChainPage() {
               background: 'rgba(6,182,212,0.15)', color: '#06b6d4',
               border: '1px solid rgba(6,182,212,0.35)', display: 'flex', alignItems: 'center', gap: '6px'
             }}
-            onClick={() => setShowSimModal(true)}
+            onClick={() => {
+              if (!simForm.shipment_id && (selectedShipment || shipments[0])) {
+                setSimForm(prev => ({ ...prev, shipment_id: (selectedShipment || shipments[0]).id }));
+              }
+              setShowSimModal(true);
+            }}
           >
             <Radio size={14} /> Simulate IoT Feed
           </button>
@@ -721,12 +733,17 @@ export default function ColdChainPage() {
               <select
                 className="form-select"
                 value={simForm.shipment_id}
-                onChange={e => setSimForm({ ...simForm, shipment_id: e.target.value })}
+                onChange={e => {
+                  const id = e.target.value;
+                  setSimForm({ ...simForm, shipment_id: id });
+                  const target = shipments.find(item => item.id === id);
+                  if (target) setSelectedShipment(target);
+                }}
               >
                 <option value="">-- Choose Shipment --</option>
                 {shipments.map(s => (
                   <option key={s.id} value={s.id}>
-                    {s.cargo_type.toUpperCase()} ({s.required_min_temp}°C to {s.required_max_temp}°C) — Trip #{s.trip_id?.substring(0, 8)}
+                    {s.cargo_type?.toUpperCase()} ({s.required_min_temp}°C to {s.required_max_temp}°C) — {s.trips?.origin ? `${s.trips.origin} → ${s.trips.destination}` : `Trip #${s.trip_id?.substring(0, 8)}`}
                   </option>
                 ))}
               </select>

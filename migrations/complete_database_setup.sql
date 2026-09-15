@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS public.drivers (
   license_expiry timestamptz,
   status         text NOT NULL DEFAULT 'Off Duty' CHECK (status IN ('On Duty', 'Off Duty', 'Suspended')),
   safety_score   numeric NOT NULL DEFAULT 100,
+  phone          text,
   created_at     timestamptz NOT NULL DEFAULT now()
 );
 
