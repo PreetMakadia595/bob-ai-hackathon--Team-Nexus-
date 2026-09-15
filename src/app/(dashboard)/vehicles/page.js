@@ -215,7 +215,7 @@ export default function VehiclesPage() {
                 <label className="form-label">Odometer (km)</label>
                 <input className="form-input" type="number" value={form.odometer} onChange={e => setForm(f => ({ ...f, odometer: e.target.value }))} placeholder="e.g. 45000" />
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                 <label className="form-label">Status</label>
                 <select className="form-select" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
                   {['Available', 'In Shop', 'Suspended'].map(s => <option key={s}>{s}</option>)}

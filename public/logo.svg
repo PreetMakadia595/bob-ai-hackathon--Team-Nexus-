@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="arrowGrad" x1="16" y1="16" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e0f2fe"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield shape -->
+  <path d="M24 2L6 10v12c0 11 8 18 18 22 10-4 18-11 18-22V10L24 2z" fill="url(#shieldGrad)" opacity="0.95"/>
+  <!-- Inner shield highlight -->
+  <path d="M24 6L10 12.5v9.5c0 9 6.5 14.8 14 18 7.5-3.2 14-9 14-18v-9.5L24 6z" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+  <!-- Supply chain route lines -->
+  <path d="M14 22h6l4-4 4 4h6" stroke="url(#arrowGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Nodes on the route -->
+  <circle cx="14" cy="22" r="2" fill="white" opacity="0.9"/>
+  <circle cx="24" cy="18" r="2" fill="white"/>
+  <circle cx="34" cy="22" r="2" fill="white" opacity="0.9"/>
+  <!-- Checkmark in center-bottom -->
+  <path d="M19 29l3.5 3.5L28 27" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

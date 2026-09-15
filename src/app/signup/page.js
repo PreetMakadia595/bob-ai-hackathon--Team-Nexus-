@@ -1,8 +1,9 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { Truck, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield, ArrowRight, Info } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield, ArrowRight, Info } from 'lucide-react';
 
 const ROLES = [
   { id: 'manager', label: 'Fleet Manager', color: '#3b82f6', desc: 'Full administrative access across all modules' },
@@ -247,15 +248,14 @@ export default function SignupPage() {
           <div style={{
             width: '64px',
             height: '64px',
-            background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
             borderRadius: '16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px',
-            boxShadow: '0 8px 24px rgba(59,130,246,0.3)',
+            overflow: 'hidden',
           }}>
-            <Truck size={32} color="white" />
+            <Image src="/logo.svg" alt="SupplyShield" width={64} height={64} priority />
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: '800', letterSpacing: '-0.02em', color: '#ffffff' }}>
             Supply<span className="gradient-text">Shield</span>

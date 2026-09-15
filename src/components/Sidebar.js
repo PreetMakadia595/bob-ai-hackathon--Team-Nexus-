@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Truck, Users, Route,
@@ -65,15 +66,14 @@ export default function Sidebar() {
         <div style={{
           width: '38px',
           height: '38px',
-          background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
           borderRadius: '10px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          boxShadow: '0 4px 12px rgba(59,130,246,0.35)',
+          overflow: 'hidden',
         }}>
-          <Truck size={20} color="white" />
+          <Image src="/logo.svg" alt="SupplyShield" width={38} height={38} priority />
         </div>
         <div>
           <div style={{ fontSize: '17px', fontWeight: '800', letterSpacing: '-0.02em', lineHeight: 1 }}>

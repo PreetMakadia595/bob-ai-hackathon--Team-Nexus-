@@ -216,7 +216,7 @@ export default function TripsPage() {
       )}
 
       {showModal && (
-        <FormModal title="Create New Trip" onClose={closeModal}
+        <FormModal title="Create New Trip" onClose={closeModal} size="lg"
           footer={<>
             <button className="btn btn-secondary" onClick={closeModal}>Cancel</button>
             <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Creating...' : 'Create Trip'}</button>
