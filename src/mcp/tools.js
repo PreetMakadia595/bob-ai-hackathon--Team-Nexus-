@@ -79,7 +79,7 @@ export async function getShipments({ status = 'all', limit = 50 } = {}) {
     .select(`
       id, origin, destination, cargo_weight, status, notes, created_at,
       vehicles(id, model, license_plate, type, region, max_capacity, status),
-      drivers(id, name, license_number, status)
+      drivers(id, name, license_type, status)
     `)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -106,7 +106,7 @@ export async function getShipment({ trip_id }) {
     .select(`
       id, origin, destination, cargo_weight, status, notes, created_at,
       vehicles(id, model, license_plate, type, region, max_capacity, status),
-      drivers(id, name, license_number, status)
+      drivers(id, name, license_type, status)
     `)
     .eq('id', trip_id)
     .single();
