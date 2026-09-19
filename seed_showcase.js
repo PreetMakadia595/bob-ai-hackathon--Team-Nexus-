@@ -15,13 +15,17 @@ if (fs.existsSync(envPath)) {
       supabaseUrl = trimmed.split('=')[1]?.trim();
     }
     if (trimmed.startsWith('SUPABASE_SERVICE_ROLE_KEY=')) {
+      const val = trimmed.split('=')[1]?.trim();
+      if (val && !val.includes('your-')) serviceRoleKey = val;
+    }
+    if (trimmed.startsWith('NEXT_PUBLIC_SUPABASE_ANON_KEY=') && !serviceRoleKey) {
       serviceRoleKey = trimmed.split('=')[1]?.trim();
     }
   }
 }
 
 if (!supabaseUrl || !serviceRoleKey) {
-  console.error('Error: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in .env.local');
+  console.error('Error: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY) must be set in .env.local');
   process.exit(1);
 }
 
