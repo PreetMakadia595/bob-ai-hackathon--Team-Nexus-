@@ -7,6 +7,8 @@ import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
 import FormModal from '@/components/FormModal';
 import EmptyState from '@/components/EmptyState';
+import RouteBadge from '@/components/RouteBadge';
+import { determineRouteId } from '@/lib/routes';
 import {
   Thermometer, Plus, Radio, AlertTriangle, ShieldCheck,
   CheckCircle2, Clock, Activity, TrendingDown,
@@ -449,8 +451,13 @@ export default function ColdChainPage() {
                     <StatusBadge status={s.status} />
                   </div>
 
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    Route: <strong style={{ color: 'var(--text-primary)' }}>{trip ? `${trip.origin} → ${trip.destination}` : 'Unassigned'}</strong>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <RouteBadge
+                      routeId={trip?.route_id || determineRouteId(trip?.origin, trip?.destination)}
+                      origin={trip?.origin}
+                      destination={trip?.destination}
+                    />
+                    {trip && <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{trip.origin} ➔ {trip.destination}</span>}
                   </div>
 
                   <div style={{

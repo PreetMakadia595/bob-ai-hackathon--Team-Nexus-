@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS public.trips (
   cargo_weight    numeric,
   origin          text,
   destination     text,
+  route_id        text DEFAULT 'EW785',
   notes           text,
   final_odometer  numeric,
   status          text NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Dispatched', 'Completed', 'Cancelled')),
@@ -120,6 +121,7 @@ CREATE TABLE IF NOT EXISTS public.disruptions (
   title       text NOT NULL,
   description text,
   region      text NOT NULL,
+  route_id    text,
   severity    text NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
   status      text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'resolved', 'monitoring')),
   start_date  timestamptz NOT NULL DEFAULT now(),
@@ -133,8 +135,9 @@ CREATE TABLE IF NOT EXISTS public.shipment_disruption_impact (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   disruption_id       uuid NOT NULL REFERENCES public.disruptions(id) ON DELETE CASCADE,
   trip_id             uuid NOT NULL REFERENCES public.trips(id) ON DELETE CASCADE,
+  route_id            text,
   impact_level        text NOT NULL CHECK (impact_level IN ('low', 'medium', 'high', 'blocked')),
-  recommended_action  text NOT NULL CHECK (recommended_action IN ('reroute', 'delay', 'reassign_carrier', 'no_action')),
+  recommended_action  text NOT NULL CHECK (recommended_action IN ('reroute', 'delay', 'redeployment', 'reassign_carrier', 'reassign_vehicle', 'no_action')),
   notes               text,
   created_at          timestamptz NOT NULL DEFAULT now()
 );
@@ -206,9 +209,26 @@ CREATE TABLE IF NOT EXISTS public.carrier_alternatives (
   created_at              timestamptz NOT NULL DEFAULT now()
 );
 
--- ── 5. Indexes for Performance ───────────────────────────────────────────────
+-- ── 5. Ensure Schema Compatibility for Existing Tables ──────────────────────
+-- If tables already existed prior to this migration, ensure new columns are added:
+ALTER TABLE public.trips ADD COLUMN IF NOT EXISTS route_id text DEFAULT 'EW785';
+ALTER TABLE public.disruptions ADD COLUMN IF NOT EXISTS route_id text;
+ALTER TABLE public.shipment_disruption_impact ADD COLUMN IF NOT EXISTS route_id text;
+
+-- Update recommended_action constraint to allow 'reassign_vehicle' and 'redeployment'
+DO $$
+BEGIN
+  ALTER TABLE public.shipment_disruption_impact DROP CONSTRAINT IF EXISTS shipment_disruption_impact_recommended_action_check;
+  ALTER TABLE public.shipment_disruption_impact ADD CONSTRAINT shipment_disruption_impact_recommended_action_check 
+    CHECK (recommended_action IN ('reroute', 'delay', 'redeployment', 'reassign_carrier', 'reassign_vehicle', 'no_action'));
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
+
+-- ── 6. Indexes for Performance ───────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_vehicles_status ON public.vehicles(status);
 CREATE INDEX IF NOT EXISTS idx_vehicles_region ON public.vehicles(region);
+
 CREATE INDEX IF NOT EXISTS idx_drivers_status ON public.drivers(status);
 CREATE INDEX IF NOT EXISTS idx_trips_status ON public.trips(status);
 CREATE INDEX IF NOT EXISTS idx_trips_vehicle ON public.trips(vehicle_id);
@@ -223,6 +243,9 @@ CREATE INDEX IF NOT EXISTS idx_ccsl_shipment ON public.cold_chain_sensor_logs(co
 CREATE INDEX IF NOT EXISTS idx_ccsl_timestamp ON public.cold_chain_sensor_logs(timestamp);
 CREATE INDEX IF NOT EXISTS idx_te_shipment ON public.temperature_excursions(cold_chain_shipment_id);
 CREATE INDEX IF NOT EXISTS idx_te_status ON public.temperature_excursions(status);
+CREATE INDEX IF NOT EXISTS idx_trips_route_id ON public.trips(route_id);
+CREATE INDEX IF NOT EXISTS idx_disruptions_route_id ON public.disruptions(route_id);
+CREATE INDEX IF NOT EXISTS idx_sdi_route_id ON public.shipment_disruption_impact(route_id);
 
 -- ── 6. Row Level Security (RLS) Configuration ────────────────────────────────
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;

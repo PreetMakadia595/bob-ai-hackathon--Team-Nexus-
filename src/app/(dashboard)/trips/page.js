@@ -9,9 +9,11 @@ import StatusBadge from '@/components/StatusBadge';
 import FormModal from '@/components/FormModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import EmptyState from '@/components/EmptyState';
+import RouteBadge from '@/components/RouteBadge';
+import { determineRouteId, ROUTES_CATALOG } from '@/lib/routes';
 import { Plus, Send, CheckCircle, XCircle, Trash2, AlertTriangle } from 'lucide-react';
 
-const EMPTY = { vehicle_id: '', driver_id: '', cargo_weight: '', origin: '', destination: '', notes: '', final_odometer: '' };
+const EMPTY = { vehicle_id: '', driver_id: '', cargo_weight: '', origin: '', destination: '', route_id: 'EW785', notes: '', final_odometer: '' };
 
 export default function TripsPage() {
   const { trips, loading, error, refetch, addTrip, dispatchTrip, completeTrip, cancelTrip, deleteTrip } = useTrips();
@@ -124,19 +126,21 @@ export default function TripsPage() {
     { key: 'driver', label: 'Driver', sortable: false,
       render: r => r.drivers ? <span style={{ fontSize: '13px' }}>{r.drivers.name}</span> : <span className="text-muted">—</span>
     },
-    { key: 'route', label: 'Route', sortable: false,
-      render: r => (
-        <div style={{ fontSize: '13px' }}>
-          {r.origin && r.destination ? (
-            <span>{r.origin} → {r.destination}</span>
-          ) : (r.origin || r.destination) ? (
-            <span>{r.origin || r.destination}</span>
-          ) : (
-            <span className="text-muted">—</span>
-          )}
-          {r.notes && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>📝 {r.notes}</div>}
-        </div>
-      )
+    { key: 'route', label: 'Route & RouteID', sortable: false,
+      render: r => {
+        const routeId = r.route_id || determineRouteId(r.origin, r.destination);
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <RouteBadge routeId={routeId} origin={r.origin} destination={r.destination} />
+            {r.origin && r.destination && (
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                {r.origin} ➔ {r.destination}
+              </span>
+            )}
+            {r.notes && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📝 {r.notes}</div>}
+          </div>
+        );
+      }
     },
     { key: 'cargo_weight', label: 'Cargo (kg)', accessor: 'cargo_weight',
       render: r => r.cargo_weight ? `${Number(r.cargo_weight).toLocaleString()} kg` : <span className="text-muted">—</span>
@@ -264,11 +268,44 @@ export default function TripsPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Origin <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
-                <input className="form-input" value={form.origin} onChange={e => setForm(f => ({ ...f, origin: e.target.value }))} placeholder="e.g. Mumbai Warehouse" />
+                <input
+                  className="form-input"
+                  value={form.origin}
+                  onChange={e => {
+                    const orig = e.target.value;
+                    setForm(f => ({ ...f, origin: orig, route_id: determineRouteId(orig, f.destination) }));
+                  }}
+                  placeholder="e.g. Mumbai Warehouse"
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Destination <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
-                <input className="form-input" value={form.destination} onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} placeholder="e.g. Delhi Distribution Center" />
+                <input
+                  className="form-input"
+                  value={form.destination}
+                  onChange={e => {
+                    const dest = e.target.value;
+                    setForm(f => ({ ...f, destination: dest, route_id: determineRouteId(f.origin, dest) }));
+                  }}
+                  placeholder="e.g. Delhi Distribution Center"
+                />
+              </div>
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label">Assigned RouteID *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <select
+                    className="form-select"
+                    value={form.route_id}
+                    onChange={e => setForm(f => ({ ...f, route_id: e.target.value }))}
+                  >
+                    {ROUTES_CATALOG.map(r => (
+                      <option key={r.id} value={r.id}>
+                        {r.id} [{r.sourcePlace} ➔ {r.destPlace}] — {r.name}
+                      </option>
+                    ))}
+                  </select>
+                  <RouteBadge routeId={form.route_id} origin={form.origin} destination={form.destination} />
+                </div>
               </div>
               <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                 <label className="form-label">Notes <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>

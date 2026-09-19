@@ -1,36 +1,93 @@
 /**
- * Disruption Engine — Rule-based impact analysis and recommendation logic.
+ * Disruption Engine — Rule-based impact analysis, category mapping, and redeployment optimization logic.
  *
- * Used by the Disruption Command Panel to:
- * 1. Match disruptions against active trips by region
- * 2. Compute impact levels based on disruption severity + trip status
- * 3. Generate recommended actions
+ * Used by the Disruption Command Panel & Fleet Redeployment Optimizer to:
+ * 1. Match disruptions against active trips with assigned RouteIDs
+ * 2. Map impact categories (Critical, High, Medium, Low) to Action Statuses (Delay, Reroute, Redeployment)
+ * 3. Evaluate multi-variable optimization scores (0-100) dynamically tailored to selected disruptions
  */
+
+import { determineRouteId, getRouteById } from './routes.js';
 
 const SEVERITY_WEIGHT = { low: 1, medium: 2, high: 3, critical: 4 };
 
 /**
- * Determines whether a trip is affected by a disruption based on region matching.
- * Matches disruption.region against trip.origin and trip.destination (case-insensitive contains).
+ * Category Severity to Action Status Mapping Matrix:
+ * - High / Critical / Blocked ➔ Redeployment or Reroute
+ * - Medium ➔ Reroute or Delay
+ * - Low ➔ Delay
+ */
+export const CATEGORY_ACTION_MAPPING = {
+  critical: {
+    category: 'Critical',
+    actionStatus: 'redeployment',
+    altAction: 'reroute',
+    description: 'Corridor impassable. High priority for fleet redeployment or major bypass.',
+  },
+  blocked: {
+    category: 'High / Blocked',
+    actionStatus: 'redeployment',
+    altAction: 'reroute',
+    description: 'Severe terminal stoppage. Reallocate available fleet assets to bypass corridor.',
+  },
+  high: {
+    category: 'High',
+    actionStatus: 'reroute',
+    altAction: 'redeployment',
+    description: 'Severe transit hazard. Divert active shipment to alternative corridor route.',
+  },
+  medium: {
+    category: 'Medium',
+    actionStatus: 'delay',
+    altAction: 'reroute',
+    description: 'Moderate bottleneck. Apply schedule delay buffer or consider local detour.',
+  },
+  low: {
+    category: 'Low',
+    actionStatus: 'delay',
+    altAction: 'no_action',
+    description: 'Minor inspection or weather slowdown. Buffer absorbs impact.',
+  },
+};
+
+/**
+ * Determines whether a trip is affected by a disruption based on region and RouteID matching.
  */
 export function isTripAffected(trip, disruption) {
-  const region = (disruption.region || '').toLowerCase();
-  if (!region) return false;
+  // If trip is already rerouted, redeployed, reassigned, or finalized, it is NOT affected by active disruption
+  const tripNotes = (trip.notes || '').toUpperCase();
+  if (
+    tripNotes.includes('REROUTED') ||
+    tripNotes.includes('REDEPLOYMENT') ||
+    tripNotes.includes('REASSIGNED') ||
+    trip.status === 'Completed' ||
+    trip.status === 'Delivered' ||
+    trip.status === 'Cancelled'
+  ) {
+    return false;
+  }
+
+  const disruptionRegion = (disruption.region || '').toLowerCase();
+  const disruptionRoute = (disruption.route_id || '').toLowerCase();
+  const tripRoute = (trip.route_id || determineRouteId(trip.origin, trip.destination)).toLowerCase();
+
+  // Direct RouteID match
+  if (disruptionRoute && tripRoute && disruptionRoute === tripRoute) {
+    return true;
+  }
+
+  if (!disruptionRegion) return false;
   const origin = (trip.origin || '').toLowerCase();
   const destination = (trip.destination || '').toLowerCase();
-  return origin.includes(region) || destination.includes(region) ||
-         region.includes(origin) || region.includes(destination);
+
+  return origin.includes(disruptionRegion) ||
+         destination.includes(disruptionRegion) ||
+         disruptionRegion.includes(origin) ||
+         disruptionRegion.includes(destination);
 }
 
 /**
  * Computes the impact level for a trip given a disruption.
- *
- * Rules:
- * - critical disruption → blocked (unless trip is Draft)
- * - high disruption + Dispatched trip → high
- * - high disruption + Draft trip → medium
- * - medium disruption → medium (Dispatched) or low (Draft)
- * - low disruption → low
  */
 export function computeImpactLevel(disruption, trip) {
   const sev = SEVERITY_WEIGHT[disruption.severity] || 1;
@@ -43,42 +100,43 @@ export function computeImpactLevel(disruption, trip) {
 }
 
 /**
- * Generates a recommended action based on impact level and disruption type.
- *
- * Rules:
- * - blocked → reroute (if weather/geopolitical) or delay (if port_strike)
- * - high → reroute
- * - medium → delay (if port_strike) or reassign_carrier (otherwise)
- * - low → no_action
+ * Generates recommended action mapped from impact category:
+ * - Blocked / Critical ➔ 'redeployment' or 'reroute'
+ * - High ➔ 'reroute'
+ * - Medium ➔ 'delay' or 'reroute'
+ * - Low ➔ 'delay'
  */
 export function computeRecommendedAction(impactLevel, disruptionType) {
   if (impactLevel === 'blocked') {
-    return disruptionType === 'port_strike' ? 'delay' : 'reroute';
+    // Port strikes and severe corridor halts map to redeployment of fleet capacity
+    return disruptionType === 'port_strike' ? 'redeployment' : 'reroute';
   }
   if (impactLevel === 'high') {
     return 'reroute';
   }
   if (impactLevel === 'medium') {
-    return disruptionType === 'port_strike' ? 'delay' : 'reassign_carrier';
+    return disruptionType === 'port_strike' ? 'delay' : 'reroute';
   }
-  return 'no_action';
+  return 'delay';
 }
 
 /**
  * Generates a human-readable rationale for the recommendation.
  */
 export function generateRationale(disruption, trip, impactLevel, action) {
-  const region = disruption.region || 'affected region';
-  const route = [trip.origin, trip.destination].filter(Boolean).join(' → ') || 'this route';
+  const region = disruption.region || 'affected corridor';
+  const routeId = trip.route_id || determineRouteId(trip.origin, trip.destination);
+  const routeDesc = [trip.origin, trip.destination].filter(Boolean).join(' → ') || 'active route';
 
   const actionDescriptions = {
-    reroute: `Recommend rerouting ${route} to avoid ${region} due to ${disruption.type.replace('_', ' ')} disruption (severity: ${disruption.severity}).`,
-    delay: `Recommend delaying shipment on ${route} until ${disruption.type.replace('_', ' ')} disruption in ${region} is resolved.`,
-    reassign_carrier: `Consider reassigning to an alternative carrier not operating through ${region}.`,
-    no_action: `Impact is ${impactLevel}. Current schedule buffer should accommodate minor delays from ${disruption.type.replace('_', ' ')} in ${region}.`,
+    redeployment: `Impact is ${impactLevel.toUpperCase()}. Corridor on [${routeId}] is obstructed due to ${disruption.type.replace('_', ' ')} in ${region}. Recommend Fleet Redeployment to reposition assets around bottleneck.`,
+    reroute: `Impact is ${impactLevel.toUpperCase()} on [${routeId}]. Recommend immediate rerouting around ${region} to avoid severe delay from ${disruption.type.replace('_', ' ')} (severity: ${disruption.severity}).`,
+    delay: `Impact is ${impactLevel.toUpperCase()} on [${routeId}]. Recommend delaying departure on ${routeDesc} until disruption in ${region} clears.`,
+    reassign_carrier: `Consider reassigning cargo to alternative multimodal carrier operating outside ${region}.`,
+    no_action: `Impact is low on [${routeId}]. Existing schedule buffer accommodates anticipated delay.`,
   };
 
-  return actionDescriptions[action] || `Impact level: ${impactLevel}. Review manually.`;
+  return actionDescriptions[action] || `Impact level: ${impactLevel} on Route ${routeId}. Operator intervention recommended.`;
 }
 
 /**
@@ -93,6 +151,7 @@ export function analyzeDisruptionImpact(disruption, trips) {
       const impactLevel = computeImpactLevel(disruption, trip);
       const action = computeRecommendedAction(impactLevel, disruption.type);
       const notes = generateRationale(disruption, trip, impactLevel, action);
+      const routeId = trip.route_id || determineRouteId(trip.origin, trip.destination);
 
       impacted.push({
         disruption_id: disruption.id,
@@ -100,6 +159,7 @@ export function analyzeDisruptionImpact(disruption, trips) {
         impact_level: impactLevel,
         recommended_action: action,
         notes,
+        route_id: routeId,
       });
     }
   }
@@ -108,32 +168,203 @@ export function analyzeDisruptionImpact(disruption, trips) {
 }
 
 /**
- * Computes a redeployment priority score for an idle vehicle.
+ * Computes a transparent, multi-variable redeployment score breakdown (0-100)
+ * specifically tailored for an idle vehicle against a target disruption.
  *
- * Score (0-100) based on:
- * - Idle duration: longer idle = higher score (max 50 pts)
- * - Region demand: active disruptions in nearby regions add 10-30 pts
- * - Vehicle capacity: larger capacity = slight boost (max 20 pts)
+ * Evaluation Factors:
+ * 1. Idle Duration Component (0 - 35 points):
+ *    - 0.8 points per hour, capped at 35 points (reached at ~44h idle)
+ * 2. Regional & Corridor Proximity Fit (0 - 40 points):
+ *    - Same region / corridor RouteID match:
+ *        Critical: 40 pts, High: 35 pts, Medium: 25 pts, Low: 15 pts
+ *    - Adjacent / connected bypass corridor:
+ *        Critical: 25 pts, High: 20 pts, Medium: 15 pts
+ *    - Distant region: 8 - 10 pts
+ * 3. Payload & Vehicle Capacity Match (0 - 25 points):
+ *    - Capacity > 24,000 kg: 25 pts (heavy haulage for bulk backlogs)
+ *    - Capacity > 15,000 kg: 20 pts
+ *    - Capacity > 6,000 kg: 15 pts
+ *    - Light vehicle / Van: 10 pts (boosted to 25 pts if cold-chain reefer during pharma surge)
+ *
+ * Total = Idle (35) + Region/Route (40) + Capacity (25) = 100 max points.
  */
-export function computeRedeploymentScore(vehicle, idleHours, activeDisruptions) {
-  let score = 0;
+export function computeRedeploymentScoreBreakdown(vehicle, idleHours = 24, activeDisruptions = [], selectedDisruption = null) {
+  const hours = Math.max(1, Number(idleHours) || 1);
+  const capacity = Number(vehicle?.max_capacity) || 0;
+  const vehicleRegion = (vehicle?.region || '').toLowerCase();
+  const vehicleType = (vehicle?.type || '').toLowerCase();
 
-  // Idle duration component (0-50)
-  score += Math.min(50, Math.round(idleHours * 1.5));
+  // 1. Idle Duration Factor (Max 35 pts)
+  const idleScore = Math.min(35, Math.max(5, Math.round(hours * 0.8)));
+  const idleDetail = `${hours}h idle (${idleScore}/35 pts)`;
 
-  // Disruption demand component (0-30)
-  const regionDisruptions = activeDisruptions.filter(d =>
-    (d.region || '').toLowerCase() === (vehicle.region || '').toLowerCase() ||
-    (d.severity === 'critical' || d.severity === 'high')
+  // Determine target disruption
+  let target = selectedDisruption;
+  if (!target && Array.isArray(activeDisruptions) && activeDisruptions.length > 0) {
+    // If no specific disruption selected, pick top severity
+    const sevWeight = { critical: 4, high: 3, medium: 2, low: 1 };
+    target = [...activeDisruptions].sort((a, b) => (sevWeight[b.severity] || 0) - (sevWeight[a.severity] || 0))[0];
+  }
+
+  // 2. Regional & Route Proximity Factor (Max 40 pts)
+  let regionScore = 10;
+  let regionDetail = 'Distant corridor (10/40 pts)';
+
+  if (target) {
+    const targetRegion = (target.region || '').toLowerCase();
+    const targetRoute = (target.route_id || '').toUpperCase();
+    const sev = target.severity || 'high';
+
+    const isExactRegion = vehicleRegion && targetRegion && vehicleRegion === targetRegion;
+    const isAdjacent = (vehicleRegion === 'central' && (targetRegion === 'west' || targetRegion === 'south')) ||
+                       (vehicleRegion === 'west' && targetRegion === 'central') ||
+                       (vehicleRegion === 'north' && targetRegion === 'central');
+
+    if (isExactRegion) {
+      if (sev === 'critical') {
+        regionScore = 40;
+        regionDetail = `Exact match in ${target.region} (${targetRoute || 'Corridor'}) — Critical priority (40/40 pts)`;
+      } else if (sev === 'high') {
+        regionScore = 35;
+        regionDetail = `Exact match in ${target.region} — High surge corridor (35/40 pts)`;
+      } else if (sev === 'medium') {
+        regionScore = 26;
+        regionDetail = `Regional match in ${target.region} — Moderate surge (26/40 pts)`;
+      } else {
+        regionScore = 18;
+        regionDetail = `Regional match in ${target.region} — Low surge (18/40 pts)`;
+      }
+    } else if (isAdjacent) {
+      if (sev === 'critical') regionScore = 28;
+      else if (sev === 'high') regionScore = 22;
+      else regionScore = 16;
+      regionDetail = `Adjacent bypass corridor to ${target.region} (${regionScore}/40 pts)`;
+    } else {
+      regionScore = 8;
+      regionDetail = `Inter-region transit required to ${target.region} (8/40 pts)`;
+    }
+  } else {
+    regionScore = 15;
+    regionDetail = 'Global baseline regional readiness (15/40 pts)';
+  }
+
+  // 3. Payload & Vehicle Capacity Factor (Max 25 pts)
+  let capacityScore = 10;
+  let capacityDetail = 'Standard payload class (10/25 pts)';
+
+  const isColdChainDemand = target && (
+    target.title?.toLowerCase().includes('pharma') ||
+    target.title?.toLowerCase().includes('vaccine') ||
+    target.description?.toLowerCase().includes('cold')
   );
-  score += Math.min(30, regionDisruptions.length * 15);
 
-  // Vehicle capacity component (0-20)
-  const capacity = vehicle.max_capacity || 0;
-  if (capacity > 15000) score += 20;
-  else if (capacity > 8000) score += 15;
-  else if (capacity > 3000) score += 10;
-  else score += 5;
+  if (isColdChainDemand && vehicleType.includes('van') && vehicle?.model?.toLowerCase().includes('reefer')) {
+    capacityScore = 25;
+    capacityDetail = 'Reefer cold-chain capability matched to temperature-sensitive cargo (25/25 pts)';
+  } else if (capacity >= 25000) {
+    capacityScore = 25;
+    capacityDetail = `Heavy haulage ${Math.round(capacity / 1000)}T capacity (25/25 pts)`;
+  } else if (capacity >= 16000) {
+    capacityScore = 20;
+    capacityDetail = `Multi-axle ${Math.round(capacity / 1000)}T capacity (20/25 pts)`;
+  } else if (capacity >= 7000) {
+    capacityScore = 15;
+    capacityDetail = `Medium duty ${Math.round(capacity / 1000)}T capacity (15/25 pts)`;
+  } else {
+    capacityScore = 10;
+    capacityDetail = `Rapid dispatch capacity ${capacity}kg (10/25 pts)`;
+  }
 
-  return Math.min(100, score);
+  // Calculate Total
+  const total = Math.min(100, Math.max(0, idleScore + regionScore + capacityScore));
+  const formula = `${idleScore}/35 (Idle) + ${regionScore}/40 (Route/Region) + ${capacityScore}/25 (Capacity) = ${total}/100`;
+
+  return {
+    total,
+    idleScore,
+    regionScore,
+    capacityScore,
+    idleDetail,
+    regionDetail,
+    capacityDetail,
+    formula,
+    targetDisruption: target,
+  };
 }
+
+/**
+ * Computes a single redeployment priority score integer (0-100).
+ * Kept for backwards compatibility with existing consumers.
+ */
+export function computeRedeploymentScore(vehicle, idleHours, activeDisruptions, selectedDisruption = null) {
+  const result = computeRedeploymentScoreBreakdown(vehicle, idleHours, activeDisruptions, selectedDisruption);
+  return result.total;
+}
+
+/**
+ * 3-Tier Disruption Condition Check Engine for Vehicles:
+ * Evaluates conditions affecting a vehicle/trip during a disruption.
+ *
+ * Rules:
+ * - Low: System Decides 'Delay'
+ * - Medium: System Decides 'Delay' OR 'Reroute'
+ * - High: System Decides 'Reroute' OR 'Reassign to Other Vehicle'
+ */
+export function evaluateVehicleDisruptionCondition(trip, disruption, impactRecord = null) {
+  const rawSev = (impactRecord?.impact_level || disruption?.severity || 'medium').toLowerCase();
+
+  let category = 'medium';
+  if (rawSev === 'low') {
+    category = 'low';
+  } else if (rawSev === 'medium') {
+    category = 'medium';
+  } else {
+    // high, critical, blocked
+    category = 'high';
+  }
+
+  if (category === 'low') {
+    return {
+      category: 'low',
+      categoryLabel: 'LOW IMPACT',
+      categoryColor: '#22c55e',
+      categoryBg: 'rgba(34, 197, 94, 0.12)',
+      categoryBorder: 'rgba(34, 197, 94, 0.35)',
+      decision: 'delay',
+      decisionLabel: 'System Decision: DELAY',
+      decisionSummary: 'Minor corridor slowdown detected (< 2 hrs). System automatically decides schedule buffer delay without altering vehicle assignment or route trajectory.',
+      diagnostic: 'Corridor operational with light friction. Existing schedule buffer absorbs variance.',
+      allowedActions: ['delay'],
+    };
+  }
+
+  if (category === 'medium') {
+    return {
+      category: 'medium',
+      categoryLabel: 'MEDIUM IMPACT',
+      categoryColor: '#eab308',
+      categoryBg: 'rgba(234, 179, 8, 0.12)',
+      categoryBorder: 'rgba(234, 179, 8, 0.35)',
+      decision: 'delay_or_reroute',
+      decisionLabel: 'System Decision: DELAY or REROUTE',
+      decisionSummary: 'Moderate bottleneck or single-lane stoppage (3-6 hrs delay). System checks conditions and offers operator choice: apply buffer delay or engage alternate corridor detour.',
+      diagnostic: 'Corridor bottleneck active. Recommended: evaluate local detour bypass vs holding staging buffer.',
+      allowedActions: ['delay', 'reroute'],
+    };
+  }
+
+  // High Category
+  return {
+    category: 'high',
+    categoryLabel: 'HIGH IMPACT',
+    categoryColor: '#ef4444',
+    categoryBg: 'rgba(239, 68, 68, 0.12)',
+    categoryBorder: 'rgba(239, 68, 68, 0.35)',
+    decision: 'reroute_or_reassign',
+    decisionLabel: 'System Decision: REROUTE or REASSIGN TO OTHER VEHICLE',
+    decisionSummary: 'Severe corridor stoppage, port strike, or critical hazard (> 8 hrs delay). System checks conditions and mandates either detour rerouting OR reassigning cargo payload immediately to an idle fleet vehicle.',
+    diagnostic: 'Critical corridor impassable or vehicle immobilized. High priority: divert route or reassign payload to available fleet asset.',
+    allowedActions: ['reroute', 'reassign_vehicle'],
+  };
+}
+

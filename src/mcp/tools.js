@@ -17,8 +17,10 @@ import {
   computeRecommendedAction,
   generateRationale,
   analyzeDisruptionImpact,
-  computeRedeploymentScore
+  computeRedeploymentScore,
+  computeRedeploymentScoreBreakdown
 } from '../lib/disruption-engine.js';
+import { determineRouteId } from '../lib/routes.js';
 import {
   checkThresholdBreach,
   classifyExcursionSeverity,
@@ -90,9 +92,13 @@ export async function getShipments({ status = 'all', limit = 50 } = {}) {
 
   const { data, error } = await query;
   if (error) throw new Error(`Failed to fetch shipments: ${error.message}`);
+  const enriched = (data || []).map(s => ({
+    ...s,
+    route_id: s.route_id || determineRouteId(s.origin, s.destination)
+  }));
   return {
-    count: data?.length || 0,
-    shipments: data || []
+    count: enriched.length,
+    shipments: enriched
   };
 }
 
@@ -121,7 +127,8 @@ export async function getShipment({ trip_id }) {
 
   return {
     ...trip,
-    cold_chain_manifests: coldChain || [],
+    route_id: trip.route_id || determineRouteId(trip.origin, trip.destination),
+    cold_chain_manifest: coldChain || [],
     disruption_impacts: impacts || []
   };
 }
@@ -161,10 +168,14 @@ export async function getAffectedShipments({ disruption_id } = {}) {
       .eq('disruption_id', disruption_id);
 
     if (error) throw new Error(`Failed to fetch affected shipments: ${error.message}`);
+    const activeData = (data || []).filter(item => {
+      const n = (item.notes || '').toUpperCase();
+      return !n.includes('REROUTED') && !n.includes('REDEPLOYMENT') && !n.includes('REASSIGNED') && !n.includes('RESOLVED') && !n.includes('ACCEPTED');
+    });
     return {
       disruption_id,
-      impacted_count: data?.length || 0,
-      impacts: data || []
+      impacted_count: activeData.length,
+      impacts: activeData
     };
   }
 
@@ -179,9 +190,13 @@ export async function getAffectedShipments({ disruption_id } = {}) {
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(`Failed to fetch affected shipments: ${error.message}`);
+  const activeAll = (data || []).filter(item => {
+    const n = (item.notes || '').toUpperCase();
+    return !n.includes('REROUTED') && !n.includes('REDEPLOYMENT') && !n.includes('REASSIGNED') && !n.includes('RESOLVED') && !n.includes('ACCEPTED');
+  });
   return {
-    impacted_count: data?.length || 0,
-    impacts: data || []
+    impacted_count: activeAll.length,
+    impacts: activeAll
   };
 }
 
@@ -236,12 +251,14 @@ export async function getIdleFleetAssets({ region, min_idle_hours = 0 } = {}) {
       idleHours = Math.max(1, Math.round((now - latest) / (1000 * 60 * 60)));
     }
 
-    const priorityScore = computeRedeploymentScore(v, idleHours, disruptions || []);
+    const breakdown = computeRedeploymentScoreBreakdown(v, idleHours, disruptions || []);
     return {
       ...v,
       idle_hours: idleHours,
-      redeployment_priority_score: priorityScore,
-      recommendation_urgency: priorityScore > 75 ? 'URGENT' : priorityScore > 50 ? 'MEDIUM' : 'ROUTINE'
+      route_id: determineRouteId(v.region, v.region),
+      redeployment_priority_score: breakdown.total,
+      score_breakdown: breakdown,
+      recommendation_urgency: breakdown.total > 75 ? 'URGENT' : breakdown.total > 50 ? 'MEDIUM' : 'ROUTINE'
     };
   }).filter(a => a.idle_hours >= min_idle_hours);
 
@@ -464,16 +481,19 @@ export async function recommendFleetRedeployment({ target_region, min_priority =
   const suggestedPlans = candidates.map(asset => {
     // Find highest severity disruption region
     const target = target_region || disruptions?.[0]?.region || 'West';
+    const targetRoute = disruptions?.[0]?.route_id || determineRouteId(asset.region, target);
     return {
       vehicle_id: asset.id,
       model: asset.model,
       license_plate: asset.license_plate,
       current_region: asset.region,
       suggested_destination_region: target,
+      target_route_id: targetRoute,
       idle_duration_hours: asset.idle_hours,
       priority_score: asset.redeployment_priority_score,
       urgency: asset.recommendation_urgency,
-      rationale: `Asset has been idle for ${asset.idle_hours}h. Capacity of ${asset.max_capacity}kg needed in ${target} region to relieve disruption backlog.`
+      formula: asset.score_breakdown?.formula || '',
+      rationale: `Asset has been idle for ${asset.idle_hours}h. Capacity of ${asset.max_capacity}kg needed in ${target} region on [${targetRoute}] to relieve disruption backlog.`
     };
   });
 

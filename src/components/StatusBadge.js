@@ -44,6 +44,7 @@ const STATUS_CONFIG = {
   // Recommendation actions
   'reroute':     { bg: 'rgba(6,182,212,0.12)',  color: '#06b6d4', dot: '#06b6d4' },
   'delay':       { bg: 'rgba(234,179,8,0.12)',  color: '#eab308', dot: '#eab308' },
+  'redeployment':{ bg: 'rgba(168,85,247,0.12)', color: '#a855f7', dot: '#a855f7' },
   'reassign_carrier': { bg: 'rgba(168,85,247,0.12)', color: '#a855f7', dot: '#a855f7' },
   'no_action':   { bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', dot: '#64748b' },
   // Cold chain shipment statuses

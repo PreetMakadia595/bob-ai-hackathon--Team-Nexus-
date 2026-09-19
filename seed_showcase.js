@@ -96,6 +96,7 @@ async function seed() {
       cargo_weight: 6800,
       origin: 'Mumbai Central Logistics Hub (Cold Depot)',
       destination: 'Ahmedabad Pharma Distribution Center',
+      route_id: 'WN412', // West Corridor
       notes: 'URGENT: Rotavirus & MMR Vaccine Batch #VX-8842. Maintain 2°C - 8°C unbroken cold chain.',
       status: 'Dispatched'
     },
@@ -105,6 +106,7 @@ async function seed() {
       cargo_weight: 18500,
       origin: 'Chennai Port Container Terminal 2',
       destination: 'Bengaluru Electronic City Tech Park',
+      route_id: 'SE320', // South Corridor
       notes: 'High-value semiconductor fabrication components and server racks.',
       status: 'Dispatched'
     },
@@ -114,6 +116,7 @@ async function seed() {
       cargo_weight: 3200,
       origin: 'Pune Serum Bio-Tech Cluster',
       destination: 'Hyderabad Genome Valley Research Depot',
+      route_id: 'CW550', // Central-West Corridor
       notes: 'Monoclonal antibody therapeutics ($100K+ value). Continuous sensor logging active.',
       status: 'Dispatched'
     },
@@ -123,6 +126,7 @@ async function seed() {
       cargo_weight: 16000,
       origin: 'Kolkata Haldia Marine Port',
       destination: 'Patna Central Regional Logistics Park',
+      route_id: 'EW785', // East to West Route
       notes: 'FMCG and packaged consumer goods transit.',
       status: 'Dispatched'
     },
@@ -132,6 +136,7 @@ async function seed() {
       cargo_weight: 24000,
       origin: 'Kandla Heavy Machinery Dock',
       destination: 'Nagpur Multi-modal International Cargo Hub',
+      route_id: 'WE786', // West to East Route
       notes: 'Heavy industrial pump turbines and replacement assemblies.',
       status: 'Draft'
     },
@@ -141,6 +146,7 @@ async function seed() {
       cargo_weight: 21500,
       origin: 'Delhi Gateway Cargo Terminal',
       destination: 'Jaipur Integrated Transport Hub',
+      route_id: 'NC210', // North Corridor
       notes: 'Automotive tier-1 transmission units. Delivered without defect.',
       status: 'Completed',
       final_odometer: 48200
@@ -151,6 +157,7 @@ async function seed() {
       cargo_weight: 14000,
       origin: 'Kochi Port Maritime Terminal',
       destination: 'Coimbatore Textile Engineering Complex',
+      route_id: 'SE320', // South Corridor
       notes: 'Cancelled due to severe early monsoon alert.',
       status: 'Cancelled'
     }
@@ -166,6 +173,7 @@ async function seed() {
       title: 'Severe Cyclone Biparjoy — Western Coastline (Gujarat/Maharashtra)',
       description: 'Category 3 cyclone making landfall near Kandla/Mundra coastal corridor. Severe flooding on NH-8 & NH-27. Kandla port container terminals suspended for 48 hours.',
       region: 'West',
+      route_id: 'WN412',
       severity: 'critical',
       status: 'active',
       start_date: new Date(Date.now() - 4 * 3600000).toISOString(),
@@ -176,6 +184,7 @@ async function seed() {
       title: 'Dock Workers & Crane Operators Strike — Chennai Port Terminal',
       description: 'Indefinite labor stoppage by Chennai Port handling unions. Over 4,200 TEU container backlog. Inward & outward freight halted with estimated 72+ hour clearance delay.',
       region: 'South',
+      route_id: 'SE320',
       severity: 'high',
       status: 'active',
       start_date: new Date(Date.now() - 26 * 3600000).toISOString(),
@@ -186,6 +195,7 @@ async function seed() {
       title: 'Monsoon Landslide & Highway Collapse — Western Ghats (Pune-Goa NH-66)',
       description: 'Major landslide blocking two arterial lanes on NH-66. Traffic diverted through interior mountain routes with heavy axle weight restrictions.',
       region: 'West',
+      route_id: 'CW550',
       severity: 'high',
       status: 'active',
       start_date: new Date(Date.now() - 14 * 3600000).toISOString(),
@@ -196,6 +206,7 @@ async function seed() {
       title: 'Interstate Transit Checkpoint Blockade — Northern Corridor',
       description: 'Emergency highway diversions and strict border freight inspections along Delhi-Jaipur highway causing 8-12 hour transit delays.',
       region: 'North',
+      route_id: 'NC210',
       severity: 'medium',
       status: 'monitoring',
       start_date: new Date(Date.now() - 48 * 3600000).toISOString(),
@@ -211,30 +222,34 @@ async function seed() {
     {
       disruption_id: disList[0].id, // Cyclone
       trip_id: tList[0].id,         // Trip 1 (Mumbai -> Ahmedabad Vaccines)
+      route_id: 'WN412',
       impact_level: 'high',
       recommended_action: 'reroute',
-      notes: 'Direct route NH-8 flooded near Surat. Reroute recommendation: Divert via NH-48 -> Central Inland Expressway (Vadodara bypass). Adds 65 km (+2.5 hrs) but bypasses coastal cyclone impact zone completely.'
+      notes: 'Direct route NH-8 on [WN412] flooded near Surat. Reroute recommendation: Divert via NH-48 -> Central Inland Expressway (Vadodara bypass). Adds 65 km (+2.5 hrs).'
     },
     {
       disruption_id: disList[1].id, // Port Strike
       trip_id: tList[1].id,         // Trip 2 (Chennai -> Bengaluru)
+      route_id: 'SE320',
       impact_level: 'blocked',
-      recommended_action: 'reassign_carrier',
-      notes: 'Chennai Port gate operations at full standstill. Recommended alternative: Divert container clearance to Krishnapatnam Deepwater Port with dedicated inland rail-freight link.'
+      recommended_action: 'redeployment',
+      notes: 'Chennai Port gate operations at full standstill on [SE320]. Recommended Status: REDEPLOYMENT. Reposition idle container chassis to Krishnapatnam Deepwater Port.'
     },
     {
       disruption_id: disList[2].id, // Landslide
       trip_id: tList[2].id,         // Trip 3 (Pune -> Hyderabad)
+      route_id: 'CW550',
       impact_level: 'high',
       recommended_action: 'delay',
-      notes: 'NH-66 closed for heavy freight. Hold shipment at Pune Temperature-Controlled Warehouse for 12 hours until secondary route cleared.'
+      notes: 'NH-66 on [CW550] closed for heavy freight. Recommended Status: DELAY. Hold shipment at Pune Temperature-Controlled Warehouse for 12 hours.'
     },
     {
       disruption_id: disList[3].id, // Checkpoint
       trip_id: tList[3].id,         // Trip 4 (East)
+      route_id: 'EW785',
       impact_level: 'low',
-      recommended_action: 'no_action',
-      notes: 'Buffer time in delivery schedule is 4.5 hours, exceeding anticipated 30-minute checkpoint delay.'
+      recommended_action: 'delay',
+      notes: 'Buffer time in delivery schedule on [EW785] is 4.5 hours. Recommended Status: DELAY. Adjust arrival window by 30 minutes.'
     }
   ];
   const { error: impErr } = await supabase.from('shipment_disruption_impact').insert(impactsData);

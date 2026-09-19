@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase';
+import { getRoutePlaces, getAlternateRouteDetails } from '../routes';
 
 export function useShipmentImpact(disruptionId = null) {
   const [impacts, setImpacts] = useState([]);
@@ -13,8 +14,8 @@ export function useShipmentImpact(disruptionId = null) {
       .from('shipment_disruption_impact')
       .select(`
         *,
-        disruptions(id, title, type, region, severity, status),
-        trips(id, origin, destination, status, cargo_weight, vehicles(id, model, license_plate), drivers(id, name))
+        disruptions(id, title, type, region, route_id, severity, status),
+        trips(id, origin, destination, route_id, status, notes, cargo_weight, vehicles(id, model, license_plate, region, type), drivers(id, name))
       `)
       .order('created_at', { ascending: false });
 
@@ -23,8 +24,30 @@ export function useShipmentImpact(disruptionId = null) {
     }
 
     const { data, error } = await query;
-    if (error) { setError(error.message); }
-    else { setImpacts(data || []); }
+    if (error) {
+      setError(error.message);
+    } else {
+      // Filter out any records that were already rerouted, redeployed, reassigned, resolved, or dismissed
+      const activeOnly = (data || []).filter(item => {
+        const n = (item.notes || '').toUpperCase();
+        const tn = (item.trips?.notes || '').toUpperCase();
+        if (
+          n.includes('REROUTED') ||
+          n.includes('REDEPLOYMENT') ||
+          n.includes('REASSIGNED') ||
+          n.includes('RESOLVED') ||
+          n.includes('ACCEPTED') ||
+          n.includes('DISMISSED') ||
+          tn.includes('REROUTED') ||
+          tn.includes('REDEPLOYMENT') ||
+          tn.includes('REASSIGNED')
+        ) {
+          return false;
+        }
+        return true;
+      });
+      setImpacts(activeOnly);
+    }
     setLoading(false);
   }, [disruptionId]);
 
@@ -39,28 +62,50 @@ export function useShipmentImpact(disruptionId = null) {
   }, [fetch]);
 
   /**
-   * Accept a recommendation — execute the recommended action on the linked trip.
-   * - reroute: update trip destination with a note
-   * - delay: keep trip in current status, add note
-   * - reassign_carrier: if there are available vehicles, reassign
-   * - no_action: dismiss the impact record
+   * Accept a recommendation — execute the mapped action on the linked trip.
+   * - reroute: update trip with alternate route & notes, and REMOVE from active disruption
+   * - delay: apply schedule delay note
+   * - redeployment: flag vehicle for priority redeployment, create suggestion, and REMOVE from active disruption
+   * - reassign_carrier: find available alternative carrier/vehicle, and REMOVE from active disruption
    */
-  const acceptRecommendation = async (impactId) => {
+  const acceptRecommendation = async (impactId, customAction = null) => {
     const impact = impacts.find(i => i.id === impactId);
     if (!impact) throw new Error('Impact record not found');
 
-    const { recommended_action, trip_id } = impact;
+    const action = customAction || impact.recommended_action;
+    const { trip_id, trips: trip } = impact;
 
-    if (recommended_action === 'reroute') {
+    if (action === 'reroute') {
+      const altDetails = getAlternateRouteDetails(trip, impact.disruptions);
+      const updatePayload = {
+        notes: `[REROUTED to ${altDetails.alternateRouteId} (${altDetails.detourVia})] Corridor bypassed due to disruption. ${impact.notes || ''}`.trim(),
+      };
+      if (altDetails.alternateRouteId) {
+        updatePayload.route_id = altDetails.alternateRouteId;
+      }
+      await supabase.from('trips').update(updatePayload).eq('id', trip_id);
+    } else if (action === 'delay') {
       await supabase.from('trips').update({
-        notes: `[REROUTED] Original route affected by disruption. ${impact.notes || ''}`.trim(),
+        notes: `[DELAYED] Transit held due to corridor alert. ${impact.notes || ''}`.trim(),
       }).eq('id', trip_id);
-    } else if (recommended_action === 'delay') {
+    } else if (action === 'redeployment') {
       await supabase.from('trips').update({
-        notes: `[DELAYED] Shipment delayed due to disruption. ${impact.notes || ''}`.trim(),
+        notes: `[REDEPLOYMENT] Vehicle flagged for corridor redeployment due to critical blockage. ${impact.notes || ''}`.trim(),
       }).eq('id', trip_id);
-    } else if (recommended_action === 'reassign_carrier') {
-      // Find an available vehicle not in the disrupted region
+
+      // Create a priority fleet redeployment suggestion if vehicle is attached
+      if (trip?.vehicles?.id) {
+        await supabase.from('fleet_redeployment_suggestions').insert([{
+          vehicle_id: trip.vehicles.id,
+          current_status: 'On Trip (Blocked)',
+          idle_since: new Date().toISOString(),
+          suggested_region: impact.disruptions?.region || 'Alternate Hub',
+          reason: `Disruption on [${impact.route_id || trip.route_id || 'Corridor'}] triggered urgent redeployment.`,
+          priority_score: 95,
+          status: 'pending',
+        }]);
+      }
+    } else if (action === 'reassign_carrier') {
       const region = impact.disruptions?.region;
       let vehicleQuery = supabase.from('vehicles').select('id').eq('status', 'Available');
       if (region) {
@@ -75,11 +120,117 @@ export function useShipmentImpact(disruptionId = null) {
       }
     }
 
-    // Mark impact as acknowledged by updating the notes
-    await supabase
-      .from('shipment_disruption_impact')
-      .update({ notes: `[ACCEPTED] ${impact.notes || ''}`.trim() })
-      .eq('id', impactId);
+    // If Reroute or Redeploy (or Carrier Reassigned), remove vehicle from active disruption!
+    if (action === 'reroute' || action === 'redeployment' || action === 'reassign_carrier' || action === 'reassign_vehicle') {
+      await supabase.from('shipment_disruption_impact').delete().eq('id', impactId);
+      setImpacts(prev => prev.filter(i => i.id !== impactId));
+    } else {
+      // Mark impact as acknowledged by updating the notes
+      await supabase
+        .from('shipment_disruption_impact')
+        .update({
+          recommended_action: action,
+          notes: `[ACCEPTED: ${action.toUpperCase()}] ${impact.notes || ''}`.trim()
+        })
+        .eq('id', impactId);
+    }
+
+    await fetch();
+  };
+
+  /**
+   * Reassigns cargo/trip directly to an alternative idle vehicle.
+   * Removes disrupted vehicle from active disruption.
+   */
+  const reassignVehicleToTrip = async (impactId, tripId, newVehicle, oldVehicle = null, customNotes = '') => {
+    if (!tripId || !newVehicle?.id) throw new Error('Trip ID and New Vehicle are required.');
+
+    const newVDesc = `${newVehicle.model || 'Asset'} (${newVehicle.license_plate || 'ID: ' + newVehicle.id.slice(0, 6)})`;
+    const oldVDesc = oldVehicle ? `${oldVehicle.model} (${oldVehicle.license_plate})` : 'Disrupted Asset';
+
+    // 1. Update trip with new vehicle
+    const { error: tripErr } = await supabase
+      .from('trips')
+      .update({
+        vehicle_id: newVehicle.id,
+        notes: `[REASSIGNED] Cargo transferred from ${oldVDesc} to ${newVDesc} due to High corridor disruption. ${customNotes}`.trim(),
+      })
+      .eq('id', tripId);
+
+    if (tripErr) throw tripErr;
+
+    // 2. Mark new vehicle as 'On Trip' and old vehicle as 'Available'
+    await supabase.from('vehicles').update({ status: 'On Trip' }).eq('id', newVehicle.id);
+    if (oldVehicle?.id) {
+      await supabase.from('vehicles').update({ status: 'Available' }).eq('id', oldVehicle.id);
+    }
+
+    // 3. Remove vehicle from active disruption impacts
+    if (impactId) {
+      await supabase
+        .from('shipment_disruption_impact')
+        .delete()
+        .eq('id', impactId);
+      setImpacts(prev => prev.filter(i => i.id !== impactId));
+    }
+
+    await fetch();
+  };
+
+  /**
+   * Applies an alternate route corridor bypass to the trip.
+   * Removes vehicle from active disruption.
+   */
+  const applyRerouteToTrip = async (impactId, tripId, alternateRouteId, detourVia = '', customNotes = '') => {
+    if (!tripId) throw new Error('Trip ID is required.');
+
+    const places = getRoutePlaces(alternateRouteId);
+    const noteText = `[REROUTED to ${alternateRouteId || 'Detour'} (${places})] Bypass via ${detourVia || 'alternate corridor'}. ${customNotes}`.trim();
+
+    const updatePayload = { notes: noteText };
+    if (alternateRouteId) {
+      updatePayload.route_id = alternateRouteId;
+    }
+
+    const { error: tripErr } = await supabase.from('trips').update(updatePayload).eq('id', tripId);
+    if (tripErr) throw tripErr;
+
+    // Remove vehicle from active disruption impacts
+    if (impactId) {
+      await supabase
+        .from('shipment_disruption_impact')
+        .delete()
+        .eq('id', impactId);
+      setImpacts(prev => prev.filter(i => i.id !== impactId));
+    }
+
+    await fetch();
+  };
+
+  /**
+   * Applies a schedule delay buffer to the trip.
+   */
+  const applyDelayToTrip = async (impactId, tripId, delayHours = 2.0, customNotes = '') => {
+    if (!tripId) throw new Error('Trip ID is required.');
+
+    const { error: tripErr } = await supabase
+      .from('trips')
+      .update({
+        notes: `[DELAYED +${delayHours}h] Schedule buffer applied to absorb corridor slowdown. ${customNotes}`.trim(),
+      })
+      .eq('id', tripId);
+
+    if (tripErr) throw tripErr;
+
+    if (impactId) {
+      await supabase
+        .from('shipment_disruption_impact')
+        .update({
+          recommended_action: 'delay',
+          notes: `[RESOLVED: DELAY] Schedule buffer (+${delayHours}h) absorbed impact.`,
+        })
+        .eq('id', impactId);
+    }
 
     await fetch();
   };
@@ -87,10 +238,22 @@ export function useShipmentImpact(disruptionId = null) {
   const dismissImpact = async (impactId) => {
     await supabase
       .from('shipment_disruption_impact')
-      .update({ notes: `[DISMISSED] ${impacts.find(i => i.id === impactId)?.notes || ''}`.trim() })
+      .delete()
       .eq('id', impactId);
+    setImpacts(prev => prev.filter(i => i.id !== impactId));
     await fetch();
   };
 
-  return { impacts, loading, error, refetch: fetch, acceptRecommendation, dismissImpact };
+  return {
+    impacts,
+    loading,
+    error,
+    refetch: fetch,
+    acceptRecommendation,
+    dismissImpact,
+    reassignVehicleToTrip,
+    applyRerouteToTrip,
+    applyDelayToTrip,
+  };
 }
+

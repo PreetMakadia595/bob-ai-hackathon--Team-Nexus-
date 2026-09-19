@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import KPICard from '@/components/KPICard';
 import StatusBadge from '@/components/StatusBadge';
+import RouteBadge from '@/components/RouteBadge';
+import { determineRouteId } from '@/lib/routes';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import {
   Truck, Users, AlertTriangle, Package,
@@ -37,14 +39,19 @@ export default function DashboardPage() {
         supabase.from('drivers').select('*'),
         supabase.from('trips').select('*, vehicles(model, license_plate), drivers(name)').limit(5),
         supabase.from('disruptions').select('id').eq('status', 'active'),
-        supabase.from('shipment_disruption_impact').select('id').neq('impact_level', 'low'),
+        supabase.from('shipment_disruption_impact').select('id, notes').neq('impact_level', 'low'),
         supabase.from('temperature_excursions').select('id').eq('status', 'open'),
       ]);
       setVehicles(v || []);
       setDrivers(d || []);
       setTrips(t || []);
       setActiveDisruptionsCount(dis?.length || 0);
-      setImpactedShipmentsCount(imp?.length || 0);
+
+      const activeImpacts = (imp || []).filter(i => {
+        const n = (i.notes || '').toUpperCase();
+        return !n.includes('REROUTED') && !n.includes('REDEPLOYMENT') && !n.includes('REASSIGNED') && !n.includes('RESOLVED') && !n.includes('ACCEPTED');
+      });
+      setImpactedShipmentsCount(activeImpacts.length);
       setOpenExcursionsCount(exc?.length || 0);
     } catch (e) {
       console.warn('Dashboard fetch notice:', e);
@@ -337,11 +344,19 @@ export default function DashboardPage() {
                 borderRadius: '10px',
                 border: '1px solid var(--border-default)',
               }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '600' }}>
-                    {trip.vehicles?.model || 'Vehicle'} → {trip.drivers?.name || 'Driver'}
-                  </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <RouteBadge
+                      routeId={trip.route_id || determineRouteId(trip.origin, trip.destination)}
+                      origin={trip.origin}
+                      destination={trip.destination}
+                    />
+                    <span style={{ fontSize: '14px', fontWeight: '600' }}>
+                      {trip.vehicles?.model || 'Vehicle'} → {trip.drivers?.name || 'Driver'}
+                    </span>
+                  </div>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {trip.origin && trip.destination ? `${trip.origin} → ${trip.destination} · ` : ''}
                     {trip.cargo_weight ? `${trip.cargo_weight} kg cargo` : 'Trip #' + trip.id?.substring(0, 8)}
                   </span>
                 </div>

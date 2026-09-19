@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { executeTool, toolDefinitions } from '@/mcp/tools.js';
+import { determineRouteId, getRoutePlaces } from '@/lib/routes';
 
 /**
  * IBM Bob AI Chat & Reasoning API Route
@@ -52,11 +53,12 @@ export async function POST(request) {
       }
 
       if (impacts.impacts && impacts.impacts.length > 0) {
-        reply += `\n#### Recommended Mitigations:\n`;
+        reply += `\n#### Recommended Mitigations & Route Corridor Mapping:\n`;
         for (const imp of impacts.impacts.slice(0, 5)) {
           const trip = imp.trips;
-          const route = trip ? `${trip.origin} → ${trip.destination}` : `Trip ${imp.trip_id}`;
-          reply += `- **${route}**: Action: \`${imp.recommended_action.toUpperCase()}\` (Impact: **${imp.impact_level}**)\n  *Rationale: ${imp.notes || 'Review in Disruption Command Panel'}*\n`;
+          const routeId = imp.route_id || trip?.route_id || determineRouteId(trip?.origin, trip?.destination);
+          const places = getRoutePlaces(routeId, trip?.origin, trip?.destination);
+          reply += `- **[${routeId}: ${places}]**: Action: \`${imp.recommended_action.toUpperCase()}\` (Category: **${imp.impact_level.toUpperCase()}**)\n  *Rationale: ${imp.notes || 'Review in Disruption Command Panel'}*\n`;
         }
       } else {
         reply += `\n✅ *No active trips are currently blocked. Normal transit schedules remain operational.*`;
@@ -100,11 +102,13 @@ export async function POST(request) {
       if (assets.length > 0) {
         reply += `#### Prioritized Redeployment Candidates (Scored 0–100):\n`;
         for (const a of assets.slice(0, 5)) {
-          reply += `- **${a.model}** (\`${a.license_plate}\` - ${a.region} Hub)\n` +
+          const rPlaces = getRoutePlaces(a.route_id);
+          reply += `- **${a.model}** (\`${a.license_plate}\` - ${a.region} Hub [${a.route_id || 'Corridor'}: ${rPlaces}])\n` +
             `  * Priority Score: **${a.redeployment_priority_score}/100** (\`${a.recommendation_urgency}\`)\n` +
+            (a.score_breakdown?.formula ? `  * Score Calculation: \`${a.score_breakdown.formula}\`\n` : '') +
             `  * Idle Duration: **${a.idle_hours} hrs** | Capacity: **${(a.max_capacity / 1000).toFixed(1)} tons**\n`;
         }
-        reply += `\n💡 *Tip: Navigate to **Redeployment** in the sidebar to generate one-click draft dispatch trips.*`;
+        reply += `\n💡 *Tip: Navigate to **Redeployment** in the sidebar to test the Disruption Target Selector and generate one-click draft dispatch trips.*`;
       } else {
         reply += `*All fleet assets are currently deployed on active trips or undergoing scheduled maintenance.*`;
       }

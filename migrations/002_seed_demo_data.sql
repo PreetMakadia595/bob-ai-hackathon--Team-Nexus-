@@ -111,77 +111,78 @@ BEGIN
   RETURNING id INTO v_d8;
 
   -- ── 3. Trips ───────────────────────────────────────────────────────────────
-  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, notes, status)
+  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, route_id, notes, status)
   VALUES
-    (v_v2, v_d3, 6800, 'Mumbai Central Logistics Hub (Cold Depot)', 'Ahmedabad Pharma Distribution Center', 'URGENT: Rotavirus & MMR Vaccine Batch #VX-8842. Maintain 2°C - 8°C unbroken cold chain.', 'Dispatched')
+    (v_v2, v_d3, 6800, 'Mumbai Central Logistics Hub (Cold Depot)', 'Ahmedabad Pharma Distribution Center', 'WN412', 'URGENT: Rotavirus & MMR Vaccine Batch #VX-8842. Maintain 2°C - 8°C unbroken cold chain.', 'Dispatched')
   RETURNING id INTO v_t1;
 
-  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, notes, status)
+  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, route_id, notes, status)
   VALUES
-    (v_v3, v_d5, 18500, 'Chennai Port Container Terminal 2', 'Bengaluru Electronic City Tech Park', 'High-value semiconductor fabrication components and server racks.', 'Dispatched')
+    (v_v3, v_d5, 18500, 'Chennai Port Container Terminal 2', 'Bengaluru Electronic City Tech Park', 'SE320', 'High-value semiconductor fabrication components and server racks.', 'Dispatched')
   RETURNING id INTO v_t2;
 
-  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, notes, status)
+  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, route_id, notes, status)
   VALUES
-    (v_v5, v_d1, 3200, 'Pune Serum Bio-Tech Cluster', 'Hyderabad Genome Valley Research Depot', 'Monoclonal antibody therapeutics ($100K+ value). Continuous sensor logging active.', 'Dispatched')
+    (v_v5, v_d1, 3200, 'Pune Serum Bio-Tech Cluster', 'Hyderabad Genome Valley Research Depot', 'CW550', 'Monoclonal antibody therapeutics ($100K+ value). Continuous sensor logging active.', 'Dispatched')
   RETURNING id INTO v_t3;
 
-  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, notes, status)
+  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, route_id, notes, status)
   VALUES
-    (v_v7, v_d2, 16000, 'Kolkata Haldia Marine Port', 'Patna Central Regional Logistics Park', 'FMCG and packaged consumer goods transit.', 'Dispatched')
+    (v_v7, v_d2, 16000, 'Kolkata Haldia Marine Port', 'Patna Central Regional Logistics Park', 'EW785', 'FMCG and packaged consumer goods transit.', 'Dispatched')
   RETURNING id INTO v_t4;
 
-  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, notes, status)
+  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, route_id, notes, status)
   VALUES
-    (v_v4, v_d6, 24000, 'Kandla Heavy Machinery Dock', 'Nagpur Multi-modal International Cargo Hub', 'Heavy industrial pump turbines and replacement assemblies.', 'Draft')
+    (v_v4, v_d6, 24000, 'Kandla Heavy Machinery Dock', 'Nagpur Multi-modal International Cargo Hub', 'WE786', 'Heavy industrial pump turbines and replacement assemblies.', 'Draft')
   RETURNING id INTO v_t5;
 
-  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, notes, status, final_odometer)
+  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, route_id, notes, status, final_odometer)
   VALUES
-    (v_v1, v_d1, 21500, 'Delhi Gateway Cargo Terminal', 'Jaipur Integrated Transport Hub', 'Automotive tier-1 transmission units. Delivered without defect.', 'Completed', 48200)
+    (v_v1, v_d1, 21500, 'Delhi Gateway Cargo Terminal', 'Jaipur Integrated Transport Hub', 'NC210', 'Automotive tier-1 transmission units. Delivered without defect.', 'Completed', 48200)
   RETURNING id INTO v_t6;
 
-  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, notes, status)
+  INSERT INTO public.trips (vehicle_id, driver_id, cargo_weight, origin, destination, route_id, notes, status)
   VALUES
-    (v_v8, v_d4, 14000, 'Kochi Port Maritime Terminal', 'Coimbatore Textile Engineering Complex', 'Cancelled due to severe early monsoon alert.', 'Cancelled')
+    (v_v8, v_d4, 14000, 'Kochi Port Maritime Terminal', 'Coimbatore Textile Engineering Complex', 'SE320', 'Cancelled due to severe early monsoon alert.', 'Cancelled')
   RETURNING id INTO v_t7;
 
   -- ── 4. Disruptions ─────────────────────────────────────────────────────────
-  INSERT INTO public.disruptions (type, title, description, region, severity, status, start_date, source)
+  INSERT INTO public.disruptions (type, title, description, region, route_id, severity, status, start_date, source)
   VALUES
     ('weather', 'Severe Cyclone Biparjoy — Western Coastline (Gujarat/Maharashtra)',
      'Category 3 cyclone making landfall near Kandla/Mundra coastal corridor. Severe flooding on NH-8 & NH-27. Kandla port container terminals suspended for 48 hours.',
-     'West', 'critical', 'active', now() - interval '4 hours', 'IMD Meteorological Doppler Radar Advisory')
+     'West', 'WN412', 'critical', 'active', now() - interval '4 hours', 'IMD Meteorological Doppler Radar Advisory')
   RETURNING id INTO v_dis1;
 
-  INSERT INTO public.disruptions (type, title, description, region, severity, status, start_date, source)
+  INSERT INTO public.disruptions (type, title, description, region, route_id, severity, status, start_date, source)
   VALUES
     ('port_strike', 'Dock Workers & Crane Operators Strike — Chennai Port Terminal',
      'Indefinite labor stoppage by Chennai Port handling unions. Over 4,200 TEU container backlog. Inward & outward freight halted with estimated 72+ hour clearance delay.',
-     'South', 'high', 'active', now() - interval '26 hours', 'Indian Ports Association & Reuters Trade Bulletin')
+     'South', 'SE320', 'high', 'active', now() - interval '26 hours', 'Indian Ports Association & Reuters Trade Bulletin')
   RETURNING id INTO v_dis2;
 
-  INSERT INTO public.disruptions (type, title, description, region, severity, status, start_date, source)
+  INSERT INTO public.disruptions (type, title, description, region, route_id, severity, status, start_date, source)
   VALUES
     ('weather', 'Monsoon Landslide & Highway Collapse — Western Ghats (Pune-Goa NH-66)',
      'Major landslide blocking two arterial lanes on NH-66. Traffic diverted through interior mountain routes with heavy axle weight restrictions.',
-     'West', 'high', 'active', now() - interval '14 hours', 'National Highway Authority of India (NHAI)')
+     'West', 'WN412', 'high', 'active', now() - interval '14 hours', 'National Highway Authority of India (NHAI)')
   RETURNING id INTO v_dis3;
 
-  INSERT INTO public.disruptions (type, title, description, region, severity, status, start_date, source)
+  INSERT INTO public.disruptions (type, title, description, region, route_id, severity, status, start_date, source)
   VALUES
     ('geopolitical', 'Interstate Transit Checkpoint Blockade — Northern Corridor',
      'Emergency highway diversions and strict border freight inspections along Delhi-Jaipur highway causing 8-12 hour transit delays.',
-     'North', 'medium', 'monitoring', now() - interval '48 hours', 'Ministry of Road Transport & Highways (MoRTH)')
+     'North', 'NC210', 'medium', 'monitoring', now() - interval '48 hours', 'Ministry of Road Transport & Highways (MoRTH)')
   RETURNING id INTO v_dis4;
 
   -- ── 5. Shipment Disruption Impacts ─────────────────────────────────────────
-  INSERT INTO public.shipment_disruption_impact (disruption_id, trip_id, impact_level, recommended_action, notes)
+  INSERT INTO public.shipment_disruption_impact (disruption_id, trip_id, route_id, impact_level, recommended_action, notes)
   VALUES
-    (v_dis1, v_t1, 'high', 'reroute', 'Direct route NH-8 flooded near Surat. Reroute recommendation: Divert via NH-48 -> Central Inland Expressway (Vadodara bypass). Adds 65 km (+2.5 hrs) but bypasses coastal cyclone impact zone completely.'),
-    (v_dis2, v_t2, 'blocked', 'reassign_carrier', 'Chennai Port gate operations at full standstill. Recommended alternative: Divert container clearance to Krishnapatnam Deepwater Port with dedicated inland rail-freight link.'),
-    (v_dis3, v_t3, 'high', 'delay', 'NH-66 closed for heavy freight. Hold shipment at Pune Temperature-Controlled Warehouse for 12 hours until secondary route cleared.'),
-    (v_dis4, v_t4, 'low', 'no_action', 'Buffer time in delivery schedule is 4.5 hours, exceeding anticipated 30-minute checkpoint delay.');
+    (v_dis1, v_t1, 'WN412', 'high', 'reroute', 'Direct route NH-8 flooded near Surat. Reroute recommendation: Divert via NH-48 -> Central Inland Expressway (Vadodara bypass). Adds 65 km (+2.5 hrs) but bypasses coastal cyclone impact zone completely.'),
+    (v_dis2, v_t2, 'SE320', 'blocked', 'reassign_carrier', 'Chennai Port gate operations at full standstill. Recommended alternative: Divert container clearance to Krishnapatnam Deepwater Port with dedicated inland rail-freight link.'),
+    (v_dis3, v_t3, 'CW550', 'high', 'delay', 'NH-66 closed for heavy freight. Hold shipment at Pune Temperature-Controlled Warehouse for 12 hours until secondary route cleared.'),
+    (v_dis4, v_t4, 'EW785', 'low', 'no_action', 'Buffer time in delivery schedule is 4.5 hours, exceeding anticipated 30-minute checkpoint delay.');
+
 
   -- ── 6. Carrier Alternatives ────────────────────────────────────────────────
   INSERT INTO public.carrier_alternatives (disruption_id, original_carrier, suggested_carrier, estimated_delay_change, cost_delta)
