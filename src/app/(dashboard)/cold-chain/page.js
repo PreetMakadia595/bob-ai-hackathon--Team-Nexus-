@@ -441,12 +441,14 @@ export default function ColdChainPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '10px',
+                    minWidth: 0,
+                    overflow: 'hidden',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
                       <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
-                      <div style={{ minWidth: 0 }}>
+                      <div style={{ minWidth: 0, overflow: 'hidden' }}>
                         <div style={{ fontWeight: '700', fontSize: '14px', textTransform: 'capitalize', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {s.cargo_type}
                         </div>
@@ -455,19 +457,19 @@ export default function ColdChainPage() {
                         </div>
                       </div>
                     </div>
-                    <StatusBadge status={s.status} />
+                    <div style={{ flexShrink: 0 }}>
+                      <StatusBadge status={s.status} />
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ minWidth: 0, overflow: 'hidden' }}>
                       <RouteBadge
                         routeId={trip?.route_id || determineRouteId(trip?.origin, trip?.destination)}
-                        origin={trip?.origin}
-                        destination={trip?.destination}
                       />
                     </div>
                     {trip && (
-                      <span
+                      <div
                         style={{
                           fontSize: '11.5px',
                           fontWeight: '600',
@@ -480,7 +482,7 @@ export default function ColdChainPage() {
                         title={`${trip.origin} ➔ ${trip.destination}`}
                       >
                         {trip.origin} ➔ {trip.destination}
-                      </span>
+                      </div>
                     )}
                   </div>
 

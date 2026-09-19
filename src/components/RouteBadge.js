@@ -28,12 +28,16 @@ export default function RouteBadge({
         color: badge.color,
         border: `1px solid ${badge.badgeBorder}`,
         whiteSpace: 'nowrap',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
         ...style,
       }}
       title={`${badge.id}: ${badge.places} (${badge.name})`}
     >
       <Route size={11} style={{ flexShrink: 0 }} />
-      <span style={{ fontFamily: 'monospace', fontWeight: '800' }}>{badge.id}</span>
+      <span style={{ fontFamily: 'monospace', fontWeight: '800', flexShrink: 0 }}>{badge.id}</span>
       {showPlaces && badge.places && (
         <span
           style={{
@@ -43,16 +47,19 @@ export default function RouteBadge({
             opacity: 0.95,
             paddingLeft: '4px',
             borderLeft: `1px solid ${badge.badgeBorder}`,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '3px',
+            display: 'inline-block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '190px',
+            verticalAlign: 'middle',
           }}
         >
           {badge.places}
         </span>
       )}
       {showName && (
-        <span style={{ fontWeight: '500', fontFamily: 'inherit', color: 'var(--text-secondary)', marginLeft: '2px' }}>
+        <span style={{ fontWeight: '500', fontFamily: 'inherit', color: 'var(--text-secondary)', marginLeft: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           · {badge.name}
         </span>
       )}

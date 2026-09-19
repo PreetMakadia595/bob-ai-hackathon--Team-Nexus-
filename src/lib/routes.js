@@ -301,8 +301,24 @@ export function cleanPlaceName(locStr) {
   if (!locStr) return '';
   let s = locStr.replace(/\([^)]*\)/g, '').trim();
   s = s.split(',')[0].trim();
-  // Strip trailing "Hub", "Depot", "Distribution Center" if overly long
-  return s || locStr;
+
+  // Match known Indian logistics cities to keep badges clean and compact
+  const majorCities = [
+    'Mumbai', 'Ahmedabad', 'Pune', 'Surat', 'Vadodara', 'Nashik',
+    'Delhi', 'Gurugram', 'Jaipur', 'Chandigarh', 'Agra',
+    'Chennai', 'Bengaluru', 'Hyderabad', 'Kochi', 'Coimbatore',
+    'Kolkata', 'Haldia', 'Patna', 'Ranchi', 'Bhubaneswar',
+    'Nagpur', 'Indore', 'Bhopal', 'Raipur'
+  ];
+  for (const city of majorCities) {
+    if (s.toLowerCase().includes(city.toLowerCase())) {
+      return city;
+    }
+  }
+
+  // Strip trailing facility suffixes if no standard city matched
+  s = s.replace(/(Logistics Hub|Pharma Distribution Center|Distribution Center|Research Depot|Bio-Tech Cluster|Transit Corridor|Maritime Terminal|Cargo Terminal|Container Terminal|Transport Park|Regional Depot|Deepwater Port|Depot|Hub|Park|Cluster)/gi, '').trim();
+  return s || locStr.split(' ')[0] || 'Origin';
 }
 
 /**
