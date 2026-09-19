@@ -11,7 +11,16 @@ import RouteMapEmbed from '@/components/RouteMapEmbed';
 import FormModal from '@/components/FormModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import EmptyState from '@/components/EmptyState';
-import { determineRouteId, ROUTES_CATALOG, getAlternateRouteDetails } from '@/lib/routes';
+import {
+  determineRouteId,
+  ROUTES_CATALOG,
+  getAlternateRouteDetails,
+  calculateShipmentCost,
+  getExpectedTransitWindow,
+  calculateRerouteCostDelta,
+  formatINR
+} from '@/lib/routes';
+import { getDisruptionTimeWindow, checkTripBlockageStatus } from '@/lib/disruption-engine';
 import {
   AlertTriangle, Plus, RefreshCw, Trash2, Edit2,
   CloudRain, Anchor, Globe, HelpCircle, Check, X,
@@ -192,9 +201,14 @@ export default function DisruptionsPage() {
           targetImpact.trips.id,
           altDetails.alternateRouteId,
           altDetails.detourVia,
-          `AI Reroute bypass around ${targetImpact.disruptions?.region || 'disrupted'} corridor.`
+          `AI Reroute bypass around ${targetImpact.disruptions?.region || 'disrupted'} corridor.`,
+          {
+            formattedDetour: altDetails.formattedDetourCost,
+            formattedDelta: altDetails.formattedCostDelta,
+            detourETA: altDetails.detourETA,
+          }
         );
-        toast.success(`Vehicle rerouted to [${altDetails.alternateRouteId}]! Removed from active disruptions.`);
+        toast.success(`Vehicle rerouted to [${altDetails.alternateRouteId}]! Cost: ${altDetails.formattedDetourCost} (${altDetails.formattedCostDelta})`);
       } else {
         await acceptRecommendation(impactId, actionType);
         if (actionType === 'redeployment' || actionType === 'reassign_carrier') {
@@ -442,6 +456,23 @@ export default function DisruptionsPage() {
                 Corridor: <strong style={{ color: 'var(--text-primary)' }}>{selectedDisruption.region}</strong> | Type: <strong style={{ textTransform: 'capitalize' }}>{selectedDisruption.type.replace('_', ' ')}</strong>
                 {selectedDisruption.source && <span> | Source: <em>{selectedDisruption.source}</em></span>}
               </p>
+
+              {/* Blocked Time Window Badge */}
+              {(() => {
+                const timeWindow = getDisruptionTimeWindow(selectedDisruption);
+                return (
+                  <div style={{
+                    marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                    background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.35)',
+                    padding: '5px 12px', borderRadius: '7px', fontSize: '12px'
+                  }}>
+                    <Clock size={13} color="#ef4444" />
+                    <span style={{ color: '#fca5a5', fontWeight: '700' }}>Active Blockage Window:</span>
+                    <span style={{ color: '#f8fafc', fontWeight: '700' }}>{timeWindow.windowLabel}</span>
+                    <span style={{ color: '#94a3b8', fontSize: '11px' }}>— Only diverting trucks transiting during this window</span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -655,24 +686,81 @@ export default function DisruptionsPage() {
                         </div>
                       </div>
 
-                      {/* Vehicle & Driver details */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '12px', color: 'var(--text-muted)', alignItems: 'center' }}>
-                        {trip?.vehicles && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Truck size={13} color="var(--text-secondary)" />
-                            <span>
-                              Vehicle: <strong style={{ color: 'var(--text-primary)' }}>{trip.vehicles.model}</strong> (<code>{trip.vehicles.license_plate}</code>)
-                            </span>
+                      {/* Vehicle, Driver, Cost in ₹ & Expected Time (ETA) details */}
+                      {(() => {
+                        const tripCost = calculateShipmentCost(trip);
+                        const transit = getExpectedTransitWindow(trip);
+                        const timeStatus = checkTripBlockageStatus(trip, selectedDisruption);
+                        const altInfo = getAlternateRouteDetails(trip, selectedDisruption);
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '12px', color: 'var(--text-muted)', alignItems: 'center' }}>
+                              {trip?.vehicles && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <Truck size={13} color="var(--text-secondary)" />
+                                  <span>
+                                    Vehicle: <strong style={{ color: 'var(--text-primary)' }}>{trip.vehicles.model}</strong> (<code>{trip.vehicles.license_plate}</code>)
+                                  </span>
+                                </div>
+                              )}
+                              {trip?.drivers && (
+                                <span>Driver: <strong style={{ color: 'var(--text-secondary)' }}>{trip.drivers.name}</strong></span>
+                              )}
+                              {trip?.cargo_weight && (
+                                <span>Payload: <strong style={{ color: 'var(--text-secondary)' }}>{Number(trip.cargo_weight).toLocaleString()} kg</strong></span>
+                              )}
+                              <span>Trip Status: <StatusBadge status={trip?.status || 'Draft'} /></span>
+                            </div>
+
+                            {/* Financial Cost in ₹, ETA, and Time-Window Blockage Diagnosis */}
+                            <div style={{
+                              display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center',
+                              background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: '8px',
+                              border: '1px solid var(--border-default)', fontSize: '12px'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Base Cost:</span>
+                                <strong style={{ color: '#4ade80', fontSize: '13px' }}>{formatINR(tripCost)}</strong>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <Clock size={13} color="#38bdf8" />
+                                <span style={{ color: 'var(--text-muted)' }}>Expected Time (ETA):</span>
+                                <strong style={{ color: '#f8fafc' }}>{transit.etaFormatted}</strong>
+                              </div>
+
+                              {/* Time Blockage Window status */}
+                              <div style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                background: timeStatus.badgeBg, color: timeStatus.badgeColor,
+                                border: `1px solid ${timeStatus.badgeColor}40`,
+                                padding: '2px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: '700'
+                              }}>
+                                <span>{timeStatus.status}</span>
+                              </div>
+
+                              {/* Cost Difference preview on action */}
+                              {action === 'reroute' && (
+                                <div style={{ color: '#fb7185', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span>➔ Detour Cost: <strong>{altInfo.formattedDetourCost}</strong> ({altInfo.formattedCostDelta})</span>
+                                  <span style={{ color: 'var(--text-muted)' }}>| ETA: {altInfo.detourETA}</span>
+                                </div>
+                              )}
+                              {action === 'delay' && (
+                                <div style={{ color: '#facc15', fontSize: '11px' }}>
+                                  <span>➔ Delay Buffer Surcharge: <strong>+₹2,100</strong> (+2.5h buffer)</span>
+                                </div>
+                              )}
+                              {action === 'redeployment' && (
+                                <div style={{ color: '#c084fc', fontSize: '11px' }}>
+                                  <span>➔ Transfer & Repositioning: <strong>+₹6,700</strong></span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        {trip?.drivers && (
-                          <span>Driver: <strong style={{ color: 'var(--text-secondary)' }}>{trip.drivers.name}</strong></span>
-                        )}
-                        {trip?.cargo_weight && (
-                          <span>Payload: <strong style={{ color: 'var(--text-secondary)' }}>{Number(trip.cargo_weight).toLocaleString()} kg</strong></span>
-                        )}
-                        <span>Trip Status: <StatusBadge status={trip?.status || 'Draft'} /></span>
-                      </div>
+                        );
+                      })()}
 
                       {/* Rationale & Notes */}
                       {impact.notes && (
@@ -900,17 +988,54 @@ export default function DisruptionsPage() {
                       ))}
                     </div>
 
-                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                       <div style={{ fontSize: '12px', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600' }}>
                         <ShieldCheck size={14} /> Approved for Heavy Haulage & Cold Chain
                       </div>
                       <button
                         className="btn btn-sm btn-primary"
                         onClick={() => handleActionClick(currentRerouteImpact.id, 'reroute')}
-                        style={{ fontSize: '12px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        style={{ fontSize: '12px', padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}
                       >
-                        <Check size={13} /> Confirm & Dispatch Alternate Detour
+                        <Check size={13} /> Confirm & Dispatch Alternate Detour ({rerouteDetails.formattedCostDelta})
                       </button>
+                    </div>
+
+                    {/* Financial Cost & ETA Variance Card */}
+                    <div style={{
+                      marginTop: '14px',
+                      background: 'rgba(0,0,0,0.3)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-default)',
+                      padding: '12px 14px',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                      gap: '10px'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Base Shipment Cost</div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                          {rerouteDetails.formattedOriginalCost}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Detour Bypass Cost</div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#38bdf8' }}>
+                          {rerouteDetails.formattedDetourCost}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Cost Difference</div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#fb7185' }}>
+                          {rerouteDetails.formattedCostDelta}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updated Detour ETA</div>
+                        <div style={{ fontSize: '12px', fontWeight: '700', color: '#4ade80' }}>
+                          {rerouteDetails.detourETA}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -933,6 +1058,11 @@ export default function DisruptionsPage() {
                     deltaFuel={rerouteDetails.deltaFuel}
                     detourVia={rerouteDetails.detourVia}
                     height="460px"
+                    costINR={rerouteDetails.formattedOriginalCost}
+                    detourCostINR={rerouteDetails.formattedDetourCost}
+                    costDeltaINR={rerouteDetails.formattedCostDelta}
+                    expectedTime={rerouteDetails.originalETA}
+                    detourETA={rerouteDetails.detourETA}
                   />
                 </div>
               </div>

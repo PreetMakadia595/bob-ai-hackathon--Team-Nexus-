@@ -10,10 +10,10 @@ import FormModal from '@/components/FormModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import EmptyState from '@/components/EmptyState';
 import RouteBadge from '@/components/RouteBadge';
-import { determineRouteId, ROUTES_CATALOG } from '@/lib/routes';
-import { Plus, Send, CheckCircle, XCircle, Trash2, AlertTriangle } from 'lucide-react';
+import { determineRouteId, ROUTES_CATALOG, formatINR, calculateShipmentCost, getExpectedTransitWindow } from '@/lib/routes';
+import { Plus, Send, CheckCircle, XCircle, Trash2, AlertTriangle, Clock } from 'lucide-react';
 
-const EMPTY = { vehicle_id: '', driver_id: '', cargo_weight: '', origin: '', destination: '', route_id: 'EW785', notes: '', final_odometer: '' };
+const EMPTY = { vehicle_id: '', driver_id: '', cargo_weight: '', origin: '', destination: '', route_id: 'EW785', cost_inr: '', expected_time: '', notes: '', final_odometer: '' };
 
 export default function TripsPage() {
   const { trips, loading, error, refetch, addTrip, dispatchTrip, completeTrip, cancelTrip, deleteTrip } = useTrips();
@@ -66,15 +66,37 @@ export default function TripsPage() {
     if (err) { setFormError(err); return; }
     setSaving(true); setFormError('');
     try {
+      const assignedRouteId = form.route_id || determineRouteId(form.origin, form.destination);
+      const computedCost = form.cost_inr && Number(form.cost_inr) > 0
+        ? Math.round(Number(form.cost_inr))
+        : calculateShipmentCost({
+            route_id: assignedRouteId,
+            origin: form.origin,
+            destination: form.destination,
+            cargo_weight: form.cargo_weight,
+            vehicles: selectedVehicle,
+          });
+
+      const transit = getExpectedTransitWindow({
+        route_id: assignedRouteId,
+        origin: form.origin,
+        destination: form.destination,
+      });
+
+      const computedETA = form.expected_time?.trim() || transit.etaFormatted;
+
       await addTrip({
         vehicle_id: form.vehicle_id,
         driver_id: form.driver_id,
         cargo_weight: form.cargo_weight ? parseFloat(form.cargo_weight) : null,
         origin: form.origin?.trim() || null,
         destination: form.destination?.trim() || null,
+        route_id: assignedRouteId,
+        cost_inr: computedCost,
+        expected_time: computedETA,
         notes: form.notes?.trim() || null,
       });
-      toast.success('Trip created as Draft.');
+      toast.success(`Trip created as Draft. [Cost: ${formatINR(computedCost)}] [ETA: ${computedETA}]`);
       closeModal();
     } catch (e) {
       setFormError(e.message);
@@ -144,6 +166,42 @@ export default function TripsPage() {
     },
     { key: 'cargo_weight', label: 'Cargo (kg)', accessor: 'cargo_weight',
       render: r => r.cargo_weight ? `${Number(r.cargo_weight).toLocaleString()} kg` : <span className="text-muted">—</span>
+    },
+    {
+      key: 'cost',
+      label: 'Cost (₹)',
+      sortable: false,
+      render: r => {
+        const cost = calculateShipmentCost(r);
+        return (
+          <div>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>
+              {formatINR(cost)}
+            </span>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+              Tariff Base
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'expected_time',
+      label: 'Expected ETA & Transit',
+      sortable: false,
+      render: r => {
+        const tw = getExpectedTransitWindow(r);
+        return (
+          <div style={{ minWidth: '160px' }}>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Clock size={12} color="#eab308" /> {tw.etaFormatted}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              Duration: <strong>{tw.durationFormatted}</strong> · Dep: {tw.departureFormatted}
+            </div>
+          </div>
+        );
+      }
     },
     { key: 'status', label: 'Status', accessor: 'status', render: r => <StatusBadge status={r.status} /> },
     {
@@ -305,6 +363,54 @@ export default function TripsPage() {
                     ))}
                   </select>
                   <RouteBadge routeId={form.route_id} origin={form.origin} destination={form.destination} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Shipment Cost (₹) <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(auto-calculated if blank)</span></label>
+                <input
+                  className="form-input"
+                  type="number"
+                  value={form.cost_inr}
+                  onChange={e => setForm(f => ({ ...f, cost_inr: e.target.value }))}
+                  placeholder={`Auto: ₹${calculateShipmentCost({ route_id: form.route_id, cargo_weight: form.cargo_weight, vehicles: selectedVehicle }).toLocaleString('en-IN')}`}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Expected Arrival (ETA) <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(auto-computed if blank)</span></label>
+                <input
+                  className="form-input"
+                  value={form.expected_time}
+                  onChange={e => setForm(f => ({ ...f, expected_time: e.target.value }))}
+                  placeholder={`Est. ETA: ${getExpectedTransitWindow({ route_id: form.route_id }).etaFormatted}`}
+                />
+              </div>
+
+              {/* Live Tariff & Schedule Preview */}
+              <div style={{
+                gridColumn: '1 / -1',
+                padding: '10px 12px',
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+                fontSize: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Live Tariff Estimate:</span>
+                  <strong style={{ color: '#10b981', fontSize: '13px' }}>
+                    {formatINR(form.cost_inr && Number(form.cost_inr) > 0 ? Number(form.cost_inr) : calculateShipmentCost({ route_id: form.route_id, cargo_weight: form.cargo_weight, vehicles: selectedVehicle }))}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Clock size={12} color="#eab308" />
+                  <span style={{ color: 'var(--text-secondary)' }}>Transit Duration:</span>
+                  <strong style={{ color: 'var(--text-primary)' }}>
+                    {getExpectedTransitWindow({ route_id: form.route_id }).durationFormatted}
+                  </strong>
                 </div>
               </div>
               <div className="form-group" style={{ gridColumn: '1 / -1' }}>

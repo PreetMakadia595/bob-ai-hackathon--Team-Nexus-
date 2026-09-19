@@ -7,51 +7,137 @@
  * 3. Evaluate multi-variable optimization scores (0-100) dynamically tailored to selected disruptions
  */
 
-import { determineRouteId, getRouteById } from './routes.js';
+import {
+  determineRouteId,
+  getRouteById,
+  calculateShipmentCost,
+  getExpectedTransitWindow,
+  formatINR,
+  FREIGHT_CONSTANTS
+} from './routes.js';
 
 const SEVERITY_WEIGHT = { low: 1, medium: 2, high: 3, critical: 4 };
 
 /**
- * Category Severity to Action Status Mapping Matrix:
- * - High / Critical / Blocked ➔ Redeployment or Reroute
- * - Medium ➔ Reroute or Delay
- * - Low ➔ Delay
+ * Calculates the active blockage time window for a disruption.
  */
-export const CATEGORY_ACTION_MAPPING = {
-  critical: {
-    category: 'Critical',
-    actionStatus: 'redeployment',
-    altAction: 'reroute',
-    description: 'Corridor impassable. High priority for fleet redeployment or major bypass.',
-  },
-  blocked: {
-    category: 'High / Blocked',
-    actionStatus: 'redeployment',
-    altAction: 'reroute',
-    description: 'Severe terminal stoppage. Reallocate available fleet assets to bypass corridor.',
-  },
-  high: {
-    category: 'High',
-    actionStatus: 'reroute',
-    altAction: 'redeployment',
-    description: 'Severe transit hazard. Divert active shipment to alternative corridor route.',
-  },
-  medium: {
-    category: 'Medium',
-    actionStatus: 'delay',
-    altAction: 'reroute',
-    description: 'Moderate bottleneck. Apply schedule delay buffer or consider local detour.',
-  },
-  low: {
-    category: 'Low',
-    actionStatus: 'delay',
-    altAction: 'no_action',
-    description: 'Minor inspection or weather slowdown. Buffer absorbs impact.',
-  },
-};
+export function getDisruptionTimeWindow(disruption) {
+  let startDate = disruption?.start_date ? new Date(disruption.start_date) : new Date();
+  if (isNaN(startDate.getTime())) startDate = new Date();
+
+  let endDate;
+  if (disruption?.end_date) {
+    endDate = new Date(disruption.end_date);
+    if (isNaN(endDate.getTime())) endDate = null;
+  }
+
+  if (!endDate) {
+    // Estimate clearing duration based on disruption type and severity
+    const sev = (disruption?.severity || 'medium').toLowerCase();
+    const type = (disruption?.type || '').toLowerCase();
+    let durationHours = 6;
+    if (sev === 'critical' || type === 'port_strike') durationHours = 8;
+    else if (sev === 'high') durationHours = 6;
+    else if (sev === 'medium') durationHours = 4;
+    else durationHours = 2.5;
+
+    endDate = new Date(startDate.getTime() + durationHours * 3600000);
+  }
+
+  const durationHours = Math.max(1, Math.round(((endDate.getTime() - startDate.getTime()) / 3600000) * 10) / 10);
+
+  const formatIST = (d) => {
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) + ' ' +
+      d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' IST';
+  };
+
+  return {
+    startDate,
+    endDate,
+    durationHours,
+    startFormatted: formatIST(startDate),
+    endFormatted: formatIST(endDate),
+    windowLabel: `${formatIST(startDate)} — ${formatIST(endDate)} (${durationHours}h blockage)`,
+  };
+}
 
 /**
- * Determines whether a trip is affected by a disruption based on region and RouteID matching.
+ * Checks whether a trip's scheduled transit window falls inside the disruption's blockage time window.
+ * Only trucks scheduled to transit during the blockage need to be diverted.
+ */
+export function isTransitInBlockageWindow(trip, disruption) {
+  if (!disruption) return true;
+
+  const disruptionWindow = getDisruptionTimeWindow(disruption);
+  const transitWindow = getExpectedTransitWindow(trip);
+
+  const tripDep = transitWindow.departureDate.getTime();
+  const tripArr = transitWindow.arrivalDate.getTime();
+  const disStart = disruptionWindow.startDate.getTime();
+  const disEnd = disruptionWindow.endDate.getTime();
+
+  // If trip completes BEFORE disruption begins: Safe, no diversion
+  if (tripArr < disStart) {
+    return false;
+  }
+
+  // If trip departs AFTER disruption clears: Safe, no diversion
+  if (tripDep > disEnd) {
+    return false;
+  }
+
+  // Otherwise, transit window intersects the active corridor blockage!
+  return true;
+}
+
+/**
+ * Provides a human-readable diagnosis of why a truck is or is not diverted based on time window.
+ */
+export function checkTripBlockageStatus(trip, disruption) {
+  if (!disruption) {
+    return { inWindow: true, status: 'Active Corridor Alert', reason: 'Active corridor advisory' };
+  }
+
+  const disWindow = getDisruptionTimeWindow(disruption);
+  const transitWindow = getExpectedTransitWindow(trip);
+
+  const tripDep = transitWindow.departureDate.getTime();
+  const tripArr = transitWindow.arrivalDate.getTime();
+  const disStart = disWindow.startDate.getTime();
+  const disEnd = disWindow.endDate.getTime();
+
+  if (tripArr < disStart) {
+    return {
+      inWindow: false,
+      status: 'Unaffected (Pre-Disruption)',
+      badgeColor: '#10b981',
+      badgeBg: 'rgba(16, 185, 129, 0.12)',
+      reason: `Truck arrives at ${transitWindow.etaFormatted}, before disruption begins at ${disWindow.startFormatted}. Safe to transit on primary corridor without diversion.`,
+    };
+  }
+
+  if (tripDep > disEnd) {
+    return {
+      inWindow: false,
+      status: 'Unaffected (Post-Clearance)',
+      badgeColor: '#10b981',
+      badgeBg: 'rgba(16, 185, 129, 0.12)',
+      reason: `Truck departs at ${transitWindow.departureFormatted}, after estimated clearance at ${disWindow.endFormatted}. Safe to transit on primary corridor without diversion.`,
+    };
+  }
+
+  return {
+    inWindow: true,
+    status: 'In Blockage Window ➔ Divert',
+    badgeColor: '#ef4444',
+    badgeBg: 'rgba(239, 68, 68, 0.15)',
+    reason: `Transit window (${transitWindow.departureFormatted} ➔ ${transitWindow.etaFormatted}) intersects corridor blockage (${disWindow.startFormatted} ➔ ${disWindow.endFormatted}). Divert or redeployment required.`,
+  };
+}
+
+/**
+ * Determines whether a trip is affected by a disruption based on region, RouteID matching,
+ * AND time-window intersection.
  */
 export function isTripAffected(trip, disruption) {
   // If trip is already rerouted, redeployed, reassigned, or finalized, it is NOT affected by active disruption
@@ -71,19 +157,25 @@ export function isTripAffected(trip, disruption) {
   const disruptionRoute = (disruption.route_id || '').toLowerCase();
   const tripRoute = (trip.route_id || determineRouteId(trip.origin, trip.destination)).toLowerCase();
 
+  let corridorMatches = false;
   // Direct RouteID match
   if (disruptionRoute && tripRoute && disruptionRoute === tripRoute) {
-    return true;
+    corridorMatches = true;
+  } else if (disruptionRegion) {
+    const origin = (trip.origin || '').toLowerCase();
+    const destination = (trip.destination || '').toLowerCase();
+    corridorMatches = origin.includes(disruptionRegion) ||
+                      destination.includes(disruptionRegion) ||
+                      disruptionRegion.includes(origin) ||
+                      disruptionRegion.includes(destination);
   }
 
-  if (!disruptionRegion) return false;
-  const origin = (trip.origin || '').toLowerCase();
-  const destination = (trip.destination || '').toLowerCase();
+  if (!corridorMatches) {
+    return false;
+  }
 
-  return origin.includes(disruptionRegion) ||
-         destination.includes(disruptionRegion) ||
-         disruptionRegion.includes(origin) ||
-         disruptionRegion.includes(destination);
+  // TIME-WINDOW CHECK: Only divert trucks whose transit window intersects the active blockage window!
+  return isTransitInBlockageWindow(trip, disruption);
 }
 
 /**
@@ -323,8 +415,35 @@ export function evaluateVehicleDisruptionCondition(trip, disruption, impactRecor
     category = 'high';
   }
 
+  // Financial & Transit Time Calculations
+  const cost = calculateShipmentCost(trip);
+  const transitWindow = getExpectedTransitWindow(trip);
+  const timeStatus = checkTripBlockageStatus(trip, disruption);
+  const disWindow = getDisruptionTimeWindow(disruption);
+
+  const rerouteDelta = Math.round(cost * 0.16 + 1500);
+  const delayDelta = Math.round(FREIGHT_CONSTANTS.DELAY_HOLDING_COST_PER_HOUR * (category === 'low' ? 2.0 : 3.5));
+  const redeployDelta = Math.round(FREIGHT_CONSTANTS.REDEPLOYMENT_TRANSFER_FEE + 2200);
+
+  const commonProps = {
+    cost,
+    formattedCost: formatINR(cost),
+    transitWindow,
+    timeStatus,
+    disWindow,
+    rerouteCostDelta: rerouteDelta,
+    formattedRerouteCostDelta: formatINR(rerouteDelta, true),
+    delayCostDelta: delayDelta,
+    formattedDelayCostDelta: formatINR(delayDelta, true),
+    redeployCostDelta: redeployDelta,
+    formattedRedeployCostDelta: formatINR(redeployDelta, true),
+    etaFormatted: transitWindow.etaFormatted,
+    departureFormatted: transitWindow.departureFormatted,
+  };
+
   if (category === 'low') {
     return {
+      ...commonProps,
       category: 'low',
       categoryLabel: 'LOW IMPACT',
       categoryColor: '#22c55e',
@@ -340,6 +459,7 @@ export function evaluateVehicleDisruptionCondition(trip, disruption, impactRecor
 
   if (category === 'medium') {
     return {
+      ...commonProps,
       category: 'medium',
       categoryLabel: 'MEDIUM IMPACT',
       categoryColor: '#eab308',
@@ -355,6 +475,7 @@ export function evaluateVehicleDisruptionCondition(trip, disruption, impactRecor
 
   // High Category
   return {
+    ...commonProps,
     category: 'high',
     categoryLabel: 'HIGH IMPACT',
     categoryColor: '#ef4444',

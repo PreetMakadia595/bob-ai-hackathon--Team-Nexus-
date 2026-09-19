@@ -14,6 +14,15 @@
  * - Central to South Detour: CS560
  */
 
+export const FREIGHT_CONSTANTS = {
+  DIESEL_PRICE_PER_LITER: 92.5, // INR
+  BASE_RATE_PER_KM: 55,         // INR / km
+  HEAVY_REEFER_RATE_PER_KM: 72, // INR / km (for reefer & bulk cargo > 18 tons)
+  AVG_HIGHWAY_SPEED_KMH: 55,    // km/h for ETA calculations
+  DELAY_HOLDING_COST_PER_HOUR: 850, // INR / hr (driver idling + reefer unit fuel)
+  REDEPLOYMENT_TRANSFER_FEE: 4500, // INR flat transfer fee
+};
+
 export const ROUTES_CATALOG = [
   {
     id: 'EW785',
@@ -24,6 +33,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Mumbai',
     places: 'Kolkata ➔ Mumbai',
     fullPlaces: 'Kolkata Port ➔ Mumbai Central',
+    distanceKm: 1980,
+    baseTransitHours: 36.0,
+    baseCostINR: 94000,
     corridorType: 'Interstate Arterial',
     description: 'Connects Kolkata/Haldia and Gangetic ports to Mumbai/Ahmedabad industrial zones.',
     cities: ['Kolkata', 'Haldia', 'Patna', 'Bhubaneswar', 'Ahmedabad', 'Mumbai', 'Surat', 'Kandla'],
@@ -40,6 +52,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Kolkata',
     places: 'Mumbai ➔ Kolkata',
     fullPlaces: 'Mumbai Central ➔ Kolkata Port',
+    distanceKm: 1980,
+    baseTransitHours: 36.0,
+    baseCostINR: 94000,
     corridorType: 'Interstate Arterial',
     description: 'Connects western manufacturing hubs (Mumbai/Pune/Kandla) to eastern consumer markets.',
     cities: ['Mumbai', 'Pune', 'Kandla', 'Ahmedabad', 'Nagpur', 'Raipur', 'Patna', 'Kolkata'],
@@ -56,6 +71,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Bengaluru',
     places: 'Delhi ➔ Bengaluru',
     fullPlaces: 'Delhi Gateway ➔ Bengaluru Tech Hub',
+    distanceKm: 1450,
+    baseTransitHours: 26.0,
+    baseCostINR: 78000,
     corridorType: 'National Grand Trunk',
     description: 'Primary north-south freight spine connecting NCR/Punjab/Haryana to Bengaluru/Chennai.',
     cities: ['Delhi', 'Gurugram', 'Jaipur', 'Chandigarh', 'Hyderabad', 'Bengaluru', 'Chennai', 'Kochi'],
@@ -72,6 +90,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Delhi NCR',
     places: 'Chennai ➔ Delhi',
     fullPlaces: 'Chennai Port ➔ Delhi Gateway',
+    distanceKm: 1450,
+    baseTransitHours: 26.0,
+    baseCostINR: 78000,
     corridorType: 'National Grand Trunk',
     description: 'Return spine carrying southern industrial and electronic components to northern depots.',
     cities: ['Chennai', 'Bengaluru', 'Hyderabad', 'Nagpur', 'Bhopal', 'Gwalior', 'Agra', 'Delhi'],
@@ -88,6 +109,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Ahmedabad',
     places: 'Mumbai ➔ Ahmedabad',
     fullPlaces: 'Mumbai Central ➔ Ahmedabad Pharma Center',
+    distanceKm: 530,
+    baseTransitHours: 8.5,
+    baseCostINR: 48500,
     corridorType: 'Regional Coastal',
     description: 'Intra-western corridor linking Mumbai, JNPT Port, Surat, Vadodara, and Ahmedabad.',
     cities: ['Mumbai', 'JNPT', 'Pune', 'Surat', 'Vadodara', 'Ahmedabad', 'Kandla', 'Mundra'],
@@ -104,6 +128,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Bengaluru',
     places: 'Chennai ➔ Bengaluru',
     fullPlaces: 'Chennai Port ➔ Bengaluru Electronic City',
+    distanceKm: 350,
+    baseTransitHours: 6.0,
+    baseCostINR: 32000,
     corridorType: 'Regional Industrial',
     description: 'Intra-southern corridor linking Chennai Port, Electronic City, and Coimbatore.',
     cities: ['Chennai', 'Bengaluru', 'Coimbatore', 'Salem', 'Hyderabad', 'Kochi', 'Madurai'],
@@ -120,6 +147,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Jaipur',
     places: 'Delhi ➔ Jaipur',
     fullPlaces: 'Delhi Gateway ➔ Jaipur Transport Park',
+    distanceKm: 280,
+    baseTransitHours: 5.0,
+    baseCostINR: 26000,
     corridorType: 'Regional Arterial',
     description: 'Intra-northern corridor connecting Delhi NCR, Jaipur, Haryana, and Rajasthan hubs.',
     cities: ['Delhi', 'Noida', 'Gurugram', 'Jaipur', 'Chandigarh', 'Ludhiana', 'Amritsar'],
@@ -136,6 +166,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Patna',
     places: 'Kolkata ➔ Patna',
     fullPlaces: 'Kolkata Port ➔ Patna Regional Depot',
+    distanceKm: 580,
+    baseTransitHours: 10.0,
+    baseCostINR: 42000,
     corridorType: 'Regional Inland',
     description: 'Intra-eastern network connecting Haldia maritime terminal to Patna and Bihar depots.',
     cities: ['Kolkata', 'Haldia', 'Patna', 'Ranchi', 'Bhubaneswar', 'Cuttack', 'Siliguri'],
@@ -152,6 +185,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Mumbai',
     places: 'Nagpur ➔ Mumbai (Bypass)',
     fullPlaces: 'Nagpur Multi-Modal ➔ Mumbai Central (via Nashik Detour)',
+    distanceKm: 720,
+    baseTransitHours: 11.0,
+    baseCostINR: 56000,
     corridorType: 'High-Capacity Detour',
     description: 'Key bypass route rerouting cargo through Nagpur/Indore during coastal storms.',
     cities: ['Nagpur', 'Indore', 'Bhopal', 'Pune', 'Mumbai', 'Nashik', 'Aurangabad'],
@@ -168,6 +204,9 @@ export const ROUTES_CATALOG = [
     destPlace: 'Bengaluru',
     places: 'Nagpur ➔ Bengaluru (Bypass)',
     fullPlaces: 'Nagpur Central ➔ Bengaluru Tech Park (via Hyderabad Detour)',
+    distanceKm: 680,
+    baseTransitHours: 10.5,
+    baseCostINR: 54000,
     corridorType: 'High-Capacity Detour',
     description: 'Intermodal diversion corridor from Central depots to Hyderabad and Chennai.',
     cities: ['Nagpur', 'Raipur', 'Hyderabad', 'Vijayawada', 'Bengaluru'],
@@ -403,6 +442,16 @@ export function getAlternateRouteDetails(trip, disruption) {
   const mapDestination = encodeURIComponent(destination);
   const mapEmbedUrl = `https://maps.google.com/maps?saddr=${mapOrigin}&daddr=${mapDestination}&output=embed`;
 
+  // Financial Cost and Transit Time Calculations
+  const costAnalysis = calculateRerouteCostDelta(trip, { deltaKm, deltaFuel });
+  const transitWindow = getExpectedTransitWindow(trip);
+
+  // Calculate Detour ETA (+deltaTime hours)
+  const extraHours = parseFloat(deltaTime.replace(/[^0-9.]/g, '')) || 2.5;
+  const updatedArrivalDate = new Date(transitWindow.arrivalDate.getTime() + extraHours * 3600000);
+  const detourETA = updatedArrivalDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) +
+    ' ' + updatedArrivalDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' IST';
+
   return {
     primaryRouteId,
     primaryRoute,
@@ -415,11 +464,162 @@ export function getAlternateRouteDetails(trip, disruption) {
     deltaFuel,
     discoverySteps,
     mapEmbedUrl,
+    costAnalysis,
+    transitWindow,
+    originalCost: costAnalysis.originalCost,
+    detourCost: costAnalysis.detourCost,
+    costDelta: costAnalysis.costDelta,
+    formattedOriginalCost: costAnalysis.formattedOriginal,
+    formattedDetourCost: costAnalysis.formattedDetour,
+    formattedCostDelta: costAnalysis.formattedDelta,
+    originalETA: transitWindow.etaFormatted,
+    detourETA,
     hazard: {
       title: disruptionTitle,
       region: disruptionRegion,
       severity: disruptionSeverity,
     }
+  };
+}
+
+/**
+ * Format numbers as Indian Rupee strings: e.g. 48500 -> "₹48,500"
+ */
+export function formatINR(amount, includeSign = false) {
+  const num = Math.round(Number(amount) || 0);
+  const formatted = '₹' + Math.abs(num).toLocaleString('en-IN');
+  if (includeSign) {
+    return num > 0 ? `+${formatted}` : num < 0 ? `-${formatted}` : formatted;
+  }
+  return formatted;
+}
+
+/**
+ * Calculates the standard baseline shipment cost in Rupees (₹) for a trip.
+ */
+export function calculateShipmentCost(trip) {
+  if (trip?.cost_inr && Number(trip.cost_inr) > 0) {
+    return Math.round(Number(trip.cost_inr));
+  }
+  // Try extracting from trip notes if previously stored: e.g. [Cost: ₹52,000]
+  if (trip?.notes) {
+    const m = trip.notes.match(/Cost:\s*₹?([0-9,]+)/i);
+    if (m) {
+      const parsed = parseInt(m[1].replace(/,/g, ''), 10);
+      if (parsed > 0) return parsed;
+    }
+  }
+
+  const routeId = trip?.route_id || determineRouteId(trip?.origin, trip?.destination);
+  const route = getRouteById(routeId) || ROUTES_CATALOG[0];
+  const distance = route.distanceKm || 530;
+  const cargoWeight = Number(trip?.cargo_weight) || 15000;
+  const isHeavyOrReefer = cargoWeight > 18000 || (trip?.vehicles?.type || '').toLowerCase().includes('reefer');
+  const ratePerKm = isHeavyOrReefer ? FREIGHT_CONSTANTS.HEAVY_REEFER_RATE_PER_KM : FREIGHT_CONSTANTS.BASE_RATE_PER_KM;
+
+  const baseTransitCost = distance * ratePerKm;
+  const tollSurcharge = Math.round(distance * 5.5);
+  return Math.round(baseTransitCost + tollSurcharge);
+}
+
+/**
+ * Computes departure, duration, and expected arrival time (ETA) for a shipment.
+ */
+export function getExpectedTransitWindow(trip) {
+  const routeId = trip?.route_id || determineRouteId(trip?.origin, trip?.destination);
+  const route = getRouteById(routeId) || ROUTES_CATALOG[0];
+  const distance = route.distanceKm || 530;
+  const standardDurationHours = route.baseTransitHours || Math.round((distance / FREIGHT_CONSTANTS.AVG_HIGHWAY_SPEED_KMH) * 10) / 10;
+
+  // Resolve departure time
+  let departureDate;
+  if (trip?.departure_time) {
+    departureDate = new Date(trip.departure_time);
+  } else if (trip?.created_at) {
+    departureDate = new Date(trip.created_at);
+  } else {
+    departureDate = new Date();
+    departureDate.setHours(departureDate.getHours() - 2);
+  }
+
+  // Arrival Date
+  const arrivalDate = new Date(departureDate.getTime() + standardDurationHours * 3600000);
+
+  const formatIST = (d) => {
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+    }) + ' ' + d.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }) + ' IST';
+  };
+
+  const hours = Math.floor(standardDurationHours);
+  const minutes = Math.round((standardDurationHours - hours) * 60);
+
+  return {
+    departureDate,
+    arrivalDate,
+    durationHours: standardDurationHours,
+    departureFormatted: formatIST(departureDate),
+    etaFormatted: trip?.expected_time || formatIST(arrivalDate),
+    durationFormatted: `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim(),
+  };
+}
+
+/**
+ * Calculates financial cost variance (in ₹) when a vehicle is rerouted to an alternate detour corridor.
+ */
+export function calculateRerouteCostDelta(trip, alternateDetails) {
+  const originalCost = calculateShipmentCost(trip);
+  
+  const extraKm = parseInt((alternateDetails?.deltaKm || '68').replace(/[^0-9]/g, ''), 10) || 68;
+  const extraFuelLiters = parseInt((alternateDetails?.deltaFuel || '45').replace(/[^0-9]/g, ''), 10) || 45;
+
+  const fuelSurcharge = Math.round(extraFuelLiters * FREIGHT_CONSTANTS.DIESEL_PRICE_PER_LITER);
+  const distanceWearCost = Math.round(extraKm * 40);
+  const bypassTollVariance = 1500;
+
+  const costDelta = fuelSurcharge + distanceWearCost + bypassTollVariance;
+  const detourCost = originalCost + costDelta;
+  const costDeltaPercent = Math.round((costDelta / originalCost) * 1000) / 10;
+
+  return {
+    originalCost,
+    detourCost,
+    costDelta,
+    costDeltaPercent,
+    formattedOriginal: formatINR(originalCost),
+    formattedDetour: formatINR(detourCost),
+    formattedDelta: formatINR(costDelta, true),
+    fuelSurchargeFormatted: formatINR(fuelSurcharge),
+    tollVarianceFormatted: formatINR(bypassTollVariance),
+  };
+}
+
+/**
+ * Calculates cost variance (in ₹) when cargo is redeployed / reassigned to another asset.
+ */
+export function calculateRedeploymentCostDelta(trip, newVehicle) {
+  const originalCost = calculateShipmentCost(trip);
+  const transferFee = FREIGHT_CONSTANTS.REDEPLOYMENT_TRANSFER_FEE;
+  const repositioningDistance = 60;
+  const repositioningFuel = Math.round(repositioningDistance * 0.35 * FREIGHT_CONSTANTS.DIESEL_PRICE_PER_LITER);
+  
+  const costDelta = transferFee + repositioningFuel;
+  const redeployedCost = originalCost + costDelta;
+  const costDeltaPercent = Math.round((costDelta / originalCost) * 1000) / 10;
+
+  return {
+    originalCost,
+    redeployedCost,
+    costDelta,
+    costDeltaPercent,
+    formattedOriginal: formatINR(originalCost),
+    formattedRedeployed: formatINR(redeployedCost),
+    formattedDelta: formatINR(costDelta, true),
   };
 }
 

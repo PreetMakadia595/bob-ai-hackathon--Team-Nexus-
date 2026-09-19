@@ -11,7 +11,17 @@ import StatusBadge from '@/components/StatusBadge';
 import RouteBadge from '@/components/RouteBadge';
 import EmptyState from '@/components/EmptyState';
 import FormModal from '@/components/FormModal';
-import { determineRouteId, getAlternateRouteDetails, getRouteById, getRoutePlaces } from '@/lib/routes';
+import {
+  determineRouteId,
+  getAlternateRouteDetails,
+  getRouteById,
+  getRoutePlaces,
+  formatINR,
+  calculateShipmentCost,
+  getExpectedTransitWindow,
+  calculateRerouteCostDelta,
+  calculateRedeploymentCostDelta,
+} from '@/lib/routes';
 import { evaluateVehicleDisruptionCondition } from '@/lib/disruption-engine';
 import {
   RefreshCw, Check, X, Clock, Truck,
@@ -140,9 +150,10 @@ export default function RedeploymentPage() {
         trip?.id,
         altDetails.alternateRouteId,
         altDetails.detourVia,
-        `AI Reroute bypass around ${item.disruptions?.region || 'hazard'} zone.`
+        `AI Reroute bypass around ${item.disruptions?.region || 'hazard'} zone.`,
+        altDetails.costAnalysis
       );
-      toast.success(`Vehicle ${vehicle?.model || 'Asset'} rerouted to alternate bypass corridor [${altDetails.alternateRouteId}]! Removed from active disruptions.`);
+      toast.success(`Vehicle ${vehicle?.model || 'Asset'} rerouted to alternate bypass corridor [${altDetails.alternateRouteId}]! Cost delta: ${altDetails.costAnalysis?.formattedDelta || 'calculated'}. Removed from active disruptions.`);
       await Promise.all([refetchImpacts(), refetchRedeployment()]);
     } catch (err) {
       toast.error(`Failed to reroute: ${err.message}`);
@@ -183,6 +194,8 @@ export default function RedeploymentPage() {
       return;
     }
 
+    const redeployCostDelta = calculateRedeploymentCostDelta(trip, newVehicle);
+
     setIsReassigning(true);
     try {
       await reassignVehicleToTrip(
@@ -190,9 +203,10 @@ export default function RedeploymentPage() {
         trip?.id,
         newVehicle,
         oldVehicle,
-        reassignNotes
+        reassignNotes,
+        redeployCostDelta
       );
-      toast.success(`Cargo successfully transferred to ${newVehicle.model} (${newVehicle.license_plate})! Vehicle removed from active disruptions.`);
+      toast.success(`Cargo successfully transferred to ${newVehicle.model} (${newVehicle.license_plate})! Net cost delta: ${redeployCostDelta?.formattedDelta || 'calculated'}. Removed from active disruptions.`);
       setReassignModalOpen(false);
       setDisruptedItemForReassign(null);
       await Promise.all([refetchImpacts(), refetchRedeployment()]);
@@ -377,6 +391,49 @@ export default function RedeploymentPage() {
       },
     },
     {
+      key: 'cost_and_eta',
+      label: 'Shipment Cost & ETA',
+      sortable: false,
+      render: r => {
+        const cond = r.condition;
+        const timeStatus = cond.timeStatus || {};
+        return (
+          <div style={{ minWidth: '175px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '800', color: '#10b981' }}>
+                {cond.formattedCost}
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                ({cond.transitWindow?.durationFormatted || 'standard'})
+              </span>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+              <Clock size={11} color="#eab308" /> ETA: <strong style={{ color: 'var(--text-primary)' }}>{cond.etaFormatted}</strong>
+            </div>
+            <div>
+              <span style={{
+                fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: '700',
+                background: timeStatus.badgeBg || 'rgba(239,68,68,0.15)',
+                color: timeStatus.badgeColor || '#ef4444',
+                border: `1px solid ${timeStatus.badgeBorder || 'rgba(239,68,68,0.3)'}`
+              }}>
+                {timeStatus.status || 'In Blockage Window'}
+              </span>
+            </div>
+            <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '3px', fontWeight: '600' }}>
+              {cond.category === 'low' ? (
+                <span>Hold Delta: {cond.formattedDelayCostDelta}</span>
+              ) : cond.category === 'medium' ? (
+                <span>Detour Delta: {cond.formattedRerouteCostDelta}</span>
+              ) : (
+                <span>Reassign Delta: {cond.formattedRedeployCostDelta}</span>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
       key: 'condition_category',
       label: 'System Condition Check',
       sortable: false,
@@ -460,7 +517,7 @@ export default function RedeploymentPage() {
         }
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '190px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '210px' }}>
             {/* Low Category: Only Delay */}
             {cond.category === 'low' && (
               <button
@@ -468,14 +525,17 @@ export default function RedeploymentPage() {
                 style={{
                   background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e',
                   border: '1px solid rgba(34, 197, 94, 0.4)', fontSize: '11px', padding: '5px 10px',
-                  display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700'
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', fontWeight: '700'
                 }}
                 onClick={() => handleApplyDelay(r)}
                 disabled={isProcessing}
                 title="Condition: Low ➔ System Decision: Delay (Buffer Schedule)"
               >
-                <Clock size={12} />
-                {isProcessing ? 'Applying...' : 'Apply Delay Buffer (+2h)'}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Clock size={12} />
+                  {isProcessing ? 'Applying...' : 'Apply Delay (+2h)'}
+                </span>
+                <span style={{ fontSize: '10px', opacity: 0.9 }}>{cond.formattedDelayCostDelta}</span>
               </button>
             )}
 
@@ -487,26 +547,32 @@ export default function RedeploymentPage() {
                   style={{
                     background: 'rgba(234, 179, 8, 0.15)', color: '#eab308',
                     border: '1px solid rgba(234, 179, 8, 0.4)', fontSize: '11px', padding: '4px 8px',
-                    display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600'
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', fontWeight: '600'
                   }}
                   onClick={() => handleApplyDelay(r)}
                   disabled={isProcessing}
                   title="Option 1: Apply delay buffer to absorb slowdown"
                 >
-                  <Clock size={12} /> Apply Delay (+3.5h)
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={12} /> Delay (+3.5h)
+                  </span>
+                  <span style={{ fontSize: '10px' }}>{cond.formattedDelayCostDelta}</span>
                 </button>
                 <button
                   className="btn btn-sm"
                   style={{
                     background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
                     border: '1px solid rgba(59, 130, 246, 0.4)', fontSize: '11px', padding: '4px 8px',
-                    display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600'
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', fontWeight: '600'
                   }}
                   onClick={() => handleReroute(r)}
                   disabled={isProcessing}
                   title="Option 2: Reroute vehicle via alternate bypass corridor"
                 >
-                  <Route size={12} /> Reroute to Detour
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Route size={12} /> Reroute Detour
+                  </span>
+                  <span style={{ fontSize: '10px' }}>{cond.formattedRerouteCostDelta}</span>
                 </button>
               </div>
             )}
@@ -519,24 +585,30 @@ export default function RedeploymentPage() {
                   style={{
                     background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.15) 100%)',
                     color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.5)', fontSize: '11px',
-                    padding: '5px 9px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700',
+                    padding: '5px 9px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', fontWeight: '700',
                     boxShadow: '0 2px 8px rgba(239, 68, 68, 0.2)'
                   }}
                   onClick={() => openReassignModal(r)}
                   disabled={isProcessing}
                   title="Condition: High ➔ Reassign cargo immediately to an available idle fleet asset"
                 >
-                  <Truck size={12} color="#f87171" /> Reassign to Other Vehicle
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Truck size={12} color="#f87171" /> Reassign Vehicle
+                  </span>
+                  <span style={{ fontSize: '10px', color: '#fca5a5' }}>{cond.formattedRedeployCostDelta}</span>
                 </button>
 
                 <button
                   className="btn btn-sm btn-secondary"
-                  style={{ fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  style={{ fontSize: '11px', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}
                   onClick={() => handleReroute(r)}
                   disabled={isProcessing}
                   title="Condition: High ➔ Reroute via alternate detour bypass"
                 >
-                  <Route size={12} /> Reroute Corridor
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Route size={12} /> Reroute Corridor
+                  </span>
+                  <span style={{ fontSize: '10px', color: '#f59e0b' }}>{cond.formattedRerouteCostDelta}</span>
                 </button>
               </div>
             )}
@@ -1408,6 +1480,60 @@ export default function RedeploymentPage() {
                 })}
               </div>
             </div>
+
+            {/* Financial Cost Difference Breakdown */}
+            {(() => {
+              const selectedNewVehicle = dynamicallyScoredVehicles.find(v => v.id === selectedReplacementVehicleId) ||
+                                         idleVehicles.find(v => v.id === selectedReplacementVehicleId);
+              const costBreakdown = selectedNewVehicle
+                ? calculateRedeploymentCostDelta(disruptedItemForReassign.trips, selectedNewVehicle)
+                : null;
+
+              if (!costBreakdown) return null;
+
+              return (
+                <div style={{
+                  padding: '12px 14px',
+                  background: 'rgba(245, 158, 11, 0.08)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  fontSize: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: '700', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Calculator size={14} /> Financial Redeployment Cost Impact
+                    </span>
+                    <span style={{
+                      fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: '800',
+                      background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)'
+                    }}>
+                      Net Variance: {costBreakdown.formattedDelta} ({costBreakdown.costDeltaPercent > 0 ? `+${costBreakdown.costDeltaPercent}%` : `${costBreakdown.costDeltaPercent}%`})
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                    <div style={{ background: 'var(--bg-elevated)', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-default)' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Base Shipment Cost</div>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)' }}>{costBreakdown.formattedOriginal}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-elevated)', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-default)' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Transfer & Repositioning Surcharge</div>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: '#ef4444' }}>{costBreakdown.formattedDelta}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-elevated)', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-default)' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>New Reassigned Cost</div>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: '#22c55e' }}>{costBreakdown.formattedRedeployed}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                    * Includes cross-dock transfer handling (₹4,500) and repositioning fuel delta (60 km deadhead).
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Reassignment Notes */}
             <div>

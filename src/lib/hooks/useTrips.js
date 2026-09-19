@@ -37,14 +37,37 @@ export function useTrips() {
     const tempRow = { ...trip, id: tempId, status: 'Draft' };
     setTrips(prev => [tempRow, ...prev]);
     try {
-      const { data, error } = await supabase
+      const payload = { ...trip, status: 'Draft' };
+      let res = await supabase
         .from('trips')
-        .insert([{ ...trip, status: 'Draft' }])
+        .insert([payload])
         .select(`*, vehicles(id,model,license_plate,max_capacity,odometer), drivers(id,name,license_type)`)
         .single();
-      if (error) throw error;
-      setTrips(prev => prev.map(t => t.id === tempId ? data : t));
-      return data;
+
+      if (res.error && (res.error.message?.includes('column') || res.error.code === '42703')) {
+        // Fallback without optional columns, embedding metadata in notes
+        const costStr = trip.cost_inr ? ` [Cost: ₹${Number(trip.cost_inr).toLocaleString('en-IN')}]` : '';
+        const etaStr = trip.expected_time ? ` [ETA: ${trip.expected_time}]` : '';
+        const fallbackPayload = {
+          vehicle_id: trip.vehicle_id,
+          driver_id: trip.driver_id,
+          cargo_weight: trip.cargo_weight,
+          origin: trip.origin,
+          destination: trip.destination,
+          route_id: trip.route_id,
+          status: 'Draft',
+          notes: `${trip.notes || ''}${costStr}${etaStr}`.trim(),
+        };
+        res = await supabase
+          .from('trips')
+          .insert([fallbackPayload])
+          .select(`*, vehicles(id,model,license_plate,max_capacity,odometer), drivers(id,name,license_type)`)
+          .single();
+      }
+
+      if (res.error) throw res.error;
+      setTrips(prev => prev.map(t => t.id === tempId ? res.data : t));
+      return res.data;
     } catch (e) {
       setTrips(prev => prev.filter(t => t.id !== tempId));
       throw e;

@@ -119,6 +119,11 @@ export default function RouteMapEmbed({
   deltaFuel = '+45 L',
   detourVia = 'Central Inland Expressway Detour',
   height = '480px',
+  costINR = null,
+  detourCostINR = null,
+  costDeltaINR = null,
+  expectedTime = null,
+  detourETA = null,
 }) {
   const [routeMode, setRouteMode] = useState('alternate'); // 'alternate' | 'primary'
   const [mapEngine, setMapEngine] = useState('google'); // 'google' | 'radar'
@@ -575,6 +580,23 @@ export default function RouteMapEmbed({
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#c084fc' }}>
               <Fuel size={14} />
               <span>Fuel Impact: <strong>{deltaFuel}</strong></span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#38bdf8' }}>
+              <Clock size={14} />
+              <span>ETA: <strong style={{ color: '#f8fafc' }}>{routeMode === 'alternate' && detourETA ? detourETA : expectedTime || '19 Sep 20:30 IST'}</strong></span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#a7f3d0' }}>
+              <span style={{ fontWeight: '800', fontSize: '13px' }}>₹</span>
+              <span>
+                Cost: <strong style={{ color: '#f8fafc' }}>{routeMode === 'alternate' && detourCostINR ? detourCostINR : costINR || '₹48,500'}</strong>
+                {routeMode === 'alternate' && costDeltaINR && (
+                  <span style={{ color: '#fb7185', marginLeft: '5px', fontSize: '11px', fontWeight: '700' }}>
+                    ({costDeltaINR})
+                  </span>
+                )}
+              </span>
             </div>
 
             <div style={{

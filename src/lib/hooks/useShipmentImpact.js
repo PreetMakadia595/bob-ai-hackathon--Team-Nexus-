@@ -142,18 +142,20 @@ export function useShipmentImpact(disruptionId = null) {
    * Reassigns cargo/trip directly to an alternative idle vehicle.
    * Removes disrupted vehicle from active disruption.
    */
-  const reassignVehicleToTrip = async (impactId, tripId, newVehicle, oldVehicle = null, customNotes = '') => {
+  const reassignVehicleToTrip = async (impactId, tripId, newVehicle, oldVehicle = null, customNotes = '', costDeltaInfo = null) => {
     if (!tripId || !newVehicle?.id) throw new Error('Trip ID and New Vehicle are required.');
 
     const newVDesc = `${newVehicle.model || 'Asset'} (${newVehicle.license_plate || 'ID: ' + newVehicle.id.slice(0, 6)})`;
     const oldVDesc = oldVehicle ? `${oldVehicle.model} (${oldVehicle.license_plate})` : 'Disrupted Asset';
+
+    const costBadge = costDeltaInfo ? ` | Cost: ${costDeltaInfo.formattedRedeployed || '₹' + costDeltaInfo.redeployedCost} (${costDeltaInfo.formattedDelta})` : '';
 
     // 1. Update trip with new vehicle
     const { error: tripErr } = await supabase
       .from('trips')
       .update({
         vehicle_id: newVehicle.id,
-        notes: `[REASSIGNED] Cargo transferred from ${oldVDesc} to ${newVDesc} due to High corridor disruption. ${customNotes}`.trim(),
+        notes: `[REASSIGNED to ${newVDesc}${costBadge}] Cargo transferred from ${oldVDesc} due to High corridor disruption. ${customNotes}`.trim(),
       })
       .eq('id', tripId);
 
@@ -181,11 +183,12 @@ export function useShipmentImpact(disruptionId = null) {
    * Applies an alternate route corridor bypass to the trip.
    * Removes vehicle from active disruption.
    */
-  const applyRerouteToTrip = async (impactId, tripId, alternateRouteId, detourVia = '', customNotes = '') => {
+  const applyRerouteToTrip = async (impactId, tripId, alternateRouteId, detourVia = '', customNotes = '', costDeltaInfo = null) => {
     if (!tripId) throw new Error('Trip ID is required.');
 
     const places = getRoutePlaces(alternateRouteId);
-    const noteText = `[REROUTED to ${alternateRouteId || 'Detour'} (${places})] Bypass via ${detourVia || 'alternate corridor'}. ${customNotes}`.trim();
+    const costText = costDeltaInfo ? ` | Cost: ${costDeltaInfo.formattedDetour || '₹' + costDeltaInfo.detourCost} (${costDeltaInfo.formattedDelta}) | ETA: ${costDeltaInfo.detourETA || 'Updated'}` : '';
+    const noteText = `[REROUTED to ${alternateRouteId || 'Detour'} (${places})${costText}] Bypass via ${detourVia || 'alternate corridor'}. ${customNotes}`.trim();
 
     const updatePayload = { notes: noteText };
     if (alternateRouteId) {
