@@ -268,6 +268,7 @@ export default function TripsPage() {
           columns={columns}
           data={trips}
           loading={loading}
+          minWidth="1050px"
           emptyComponent={
             <EmptyState type="trips" title="No trips yet" description="Create your first trip to start dispatching vehicles." action={{ label: '+ New Trip', onClick: openAdd }} />
           }

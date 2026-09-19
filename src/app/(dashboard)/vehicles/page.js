@@ -146,7 +146,7 @@ export default function VehiclesPage() {
       </div>
 
       {/* Status summary bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px' }}>
         {Object.entries(statusCounts).map(([status, count]) => (
           <div key={status} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '10px', padding: '14px 16px' }}>
             <div style={{ fontSize: '20px', fontWeight: '800' }}>{count}</div>
@@ -166,6 +166,7 @@ export default function VehiclesPage() {
           columns={columns}
           data={vehicles}
           loading={loading}
+          minWidth="750px"
           emptyComponent={
             <EmptyState type="vehicles" title="No vehicles registered" description="Add your first vehicle to start managing your fleet." action={{ label: '+ Add Vehicle', onClick: openAdd }} />
           }

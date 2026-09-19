@@ -590,33 +590,33 @@ export default function DisruptionsPage() {
                       }}
                     >
                       {/* Top row: RouteID + Trip origin/destination + Mapping Pill + Actions */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                          <RouteBadge
-                            routeId={tripRouteId}
-                            origin={trip?.origin}
-                            destination={trip?.destination}
-                            showName={true}
-                          />
-                          <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: '1 1 300px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <RouteBadge
+                              routeId={tripRouteId}
+                              origin={trip?.origin}
+                              destination={trip?.destination}
+                            />
+                            {/* Category to Action Mapping Pill */}
+                            <div style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '5px',
+                              background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-default)',
+                              borderRadius: '6px', padding: '2px 7px', fontSize: '11px'
+                            }}>
+                              <span style={{ color: 'var(--text-muted)' }}>Cat:</span>
+                              <StatusBadge status={impact.impact_level} />
+                              <span style={{ color: 'var(--text-muted)' }}>➔ Action:</span>
+                              <StatusBadge status={action} />
+                            </div>
+                          </div>
+                          <span style={{ fontWeight: '700', fontSize: '13.5px', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
                             {trip ? `${trip.origin || 'Origin'} ➔ ${trip.destination || 'Destination'}` : `Trip #${impact.trip_id?.substring(0, 8)}`}
                           </span>
-
-                          {/* Category to Action Mapping Pill */}
-                          <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-default)',
-                            borderRadius: '6px', padding: '2px 8px', fontSize: '11px'
-                          }}>
-                            <span style={{ color: 'var(--text-muted)' }}>Category:</span>
-                            <StatusBadge status={impact.impact_level} />
-                            <span style={{ color: 'var(--text-muted)' }}>➔ Mapped Status:</span>
-                            <StatusBadge status={action} />
-                          </div>
                         </div>
 
                         {/* Mitigation Action Buttons */}
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
                           {isAccepted ? (
                             <span style={{ fontSize: '12px', color: '#22c55e', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <CheckCircle2 size={15} /> Action Applied
@@ -715,45 +715,49 @@ export default function DisruptionsPage() {
 
                             {/* Financial Cost in ₹, ETA, and Time-Window Blockage Diagnosis */}
                             <div style={{
-                              display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center',
-                              background: 'rgba(0,0,0,0.25)', padding: '8px 12px', borderRadius: '8px',
+                              display: 'flex', flexDirection: 'column', gap: '8px',
+                              background: 'rgba(0,0,0,0.25)', padding: '10px 14px', borderRadius: '8px',
                               border: '1px solid var(--border-default)', fontSize: '12px'
                             }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Base Cost:</span>
-                                <strong style={{ color: '#4ade80', fontSize: '13px' }}>{formatINR(tripCost)}</strong>
-                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Base Cost:</span>
+                                    <strong style={{ color: '#4ade80', fontSize: '13px' }}>{formatINR(tripCost)}</strong>
+                                  </div>
 
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <Clock size={13} color="#38bdf8" />
-                                <span style={{ color: 'var(--text-muted)' }}>Expected Time (ETA):</span>
-                                <strong style={{ color: '#f8fafc' }}>{transit.etaFormatted}</strong>
-                              </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <Clock size={13} color="#38bdf8" />
+                                    <span style={{ color: 'var(--text-muted)' }}>Expected Time (ETA):</span>
+                                    <strong style={{ color: '#f8fafc' }}>{transit.etaFormatted}</strong>
+                                  </div>
+                                </div>
 
-                              {/* Time Blockage Window status */}
-                              <div style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                background: timeStatus.badgeBg, color: timeStatus.badgeColor,
-                                border: `1px solid ${timeStatus.badgeColor}40`,
-                                padding: '2px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: '700'
-                              }}>
-                                <span>{timeStatus.status}</span>
+                                {/* Time Blockage Window status */}
+                                <div style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                  background: timeStatus.badgeBg, color: timeStatus.badgeColor,
+                                  border: `1px solid ${timeStatus.badgeColor}40`,
+                                  padding: '2px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: '700'
+                                }}>
+                                  <span>{timeStatus.status}</span>
+                                </div>
                               </div>
 
                               {/* Cost Difference preview on action */}
                               {action === 'reroute' && (
-                                <div style={{ color: '#fb7185', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <span>➔ Detour Cost: <strong>{altInfo.formattedDetourCost}</strong> ({altInfo.formattedCostDelta})</span>
-                                  <span style={{ color: 'var(--text-muted)' }}>| ETA: {altInfo.detourETA}</span>
+                                <div style={{ color: '#fb7185', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                  <span>➔ Detour Cost: <strong style={{ color: '#fff' }}>{altInfo.formattedDetourCost}</strong> ({altInfo.formattedCostDelta})</span>
+                                  <span style={{ color: 'var(--text-muted)' }}>| Bypass ETA: <strong style={{ color: '#fff' }}>{altInfo.detourETA}</strong></span>
                                 </div>
                               )}
                               {action === 'delay' && (
-                                <div style={{ color: '#facc15', fontSize: '11px' }}>
+                                <div style={{ color: '#facc15', fontSize: '11px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                                   <span>➔ Delay Buffer Surcharge: <strong>+₹2,100</strong> (+2.5h buffer)</span>
                                 </div>
                               )}
                               {action === 'redeployment' && (
-                                <div style={{ color: '#c084fc', fontSize: '11px' }}>
+                                <div style={{ color: '#c084fc', fontSize: '11px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                                   <span>➔ Transfer & Repositioning: <strong>+₹6,700</strong></span>
                                 </div>
                               )}
@@ -809,6 +813,7 @@ export default function DisruptionsPage() {
             searchPlaceholder="Search disruptions by title, region or RouteID..."
             pagination={true}
             pageSize={10}
+            minWidth="950px"
           />
         )}
       </div>

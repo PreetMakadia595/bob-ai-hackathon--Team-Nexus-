@@ -4,7 +4,7 @@ import { ChevronUp, ChevronDown, ChevronsUpDown, Search, ChevronLeft, ChevronRig
 
 const PAGE_SIZE = 10;
 
-export default function DataTable({ columns, data, loading, emptyMessage = 'No records found.', emptyComponent, actions }) {
+export default function DataTable({ columns, data, loading, emptyMessage = 'No records found.', emptyComponent, actions, minWidth = '650px' }) {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
   const [search, setSearch] = useState('');
@@ -75,8 +75,8 @@ export default function DataTable({ columns, data, loading, emptyMessage = 'No r
       </div>
 
       {/* Table */}
-      <div style={{ overflowX: 'auto', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderTop: 'none' }}>
-        <table className="data-table" style={{ minWidth: '600px' }}>
+      <div style={{ overflowX: 'auto', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderTop: 'none', borderRadius: '0 0 12px 12px' }}>
+        <table className="data-table" style={{ minWidth, width: '100%' }}>
           <thead>
             <tr>
               {columns.map(col => (

@@ -4,6 +4,7 @@ const fs = require('fs');
 
 async function capture() {
   const screenshotsDir = path.join(__dirname, '..', 'demo', 'screenshots');
+  const artifactDir = 'C:\\Users\\Preet Makadia\\.gemini\\antigravity-ide\\brain\\97b89038-be45-4470-92fa-b5838492ed89';
   if (!fs.existsSync(screenshotsDir)) {
     fs.mkdirSync(screenshotsDir, { recursive: true });
   }
@@ -33,15 +34,20 @@ async function capture() {
   await new Promise(r => setTimeout(r, 2000));
   const screenDisruptions = path.join(screenshotsDir, '04-disruptions-time-window-cost.png');
   await page.screenshot({ path: screenDisruptions });
-  console.log('Captured:', screenDisruptions);
+  fs.copyFileSync(screenDisruptions, path.join(artifactDir, '04-disruptions-time-window-cost.png'));
+  console.log('Captured & copied:', screenDisruptions);
 
   // 2. Redeployment Page (Condition Check Table with Cost & ETA and Cost Delta action buttons)
   console.log('Navigating to http://localhost:3000/redeployment...');
   await page.goto('http://localhost:3000/redeployment', { waitUntil: 'networkidle0' });
   await new Promise(r => setTimeout(r, 2000));
+  // Scroll down so condition evaluation table is in view
+  await page.evaluate(() => window.scrollBy(0, 480));
+  await new Promise(r => setTimeout(r, 500));
   const screenRedeploy = path.join(screenshotsDir, '05-redeployment-condition-cost-eta.png');
   await page.screenshot({ path: screenRedeploy });
-  console.log('Captured:', screenRedeploy);
+  fs.copyFileSync(screenRedeploy, path.join(artifactDir, '05-redeployment-condition-cost-eta.png'));
+  console.log('Captured & copied:', screenRedeploy);
 
   // 3. Trips Page (Cost in ₹ and ETA columns)
   console.log('Navigating to http://localhost:3000/trips...');
@@ -49,10 +55,20 @@ async function capture() {
   await new Promise(r => setTimeout(r, 2000));
   const screenTrips = path.join(screenshotsDir, '06-trips-cost-eta.png');
   await page.screenshot({ path: screenTrips });
-  console.log('Captured:', screenTrips);
+  fs.copyFileSync(screenTrips, path.join(artifactDir, '06-trips-cost-eta.png'));
+  console.log('Captured & copied:', screenTrips);
+
+  // 4. Cold Chain Page (Fixed Layout without overlapping)
+  console.log('Navigating to http://localhost:3000/cold-chain...');
+  await page.goto('http://localhost:3000/cold-chain', { waitUntil: 'networkidle0' });
+  await new Promise(r => setTimeout(r, 2000));
+  const screenColdChain = path.join(screenshotsDir, '07-cold-chain-fixed.png');
+  await page.screenshot({ path: screenColdChain });
+  fs.copyFileSync(screenColdChain, path.join(artifactDir, '07-cold-chain-fixed.png'));
+  console.log('Captured & copied:', screenColdChain);
 
   await browser.close();
-  console.log('✅ All feature showcase screenshots captured successfully!');
+  console.log('✅ All feature showcase screenshots captured and copied successfully!');
 }
 
 capture().catch(err => {

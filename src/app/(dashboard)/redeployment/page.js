@@ -22,7 +22,7 @@ import {
   calculateRerouteCostDelta,
   calculateRedeploymentCostDelta,
 } from '@/lib/routes';
-import { evaluateVehicleDisruptionCondition } from '@/lib/disruption-engine';
+import { evaluateVehicleDisruptionCondition, isTripAffected } from '@/lib/disruption-engine';
 import {
   RefreshCw, Check, X, Clock, Truck,
   Zap, ArrowUpRight, TrendingUp, AlertCircle,
@@ -48,7 +48,7 @@ export default function RedeploymentPage() {
     applyDelayToTrip
   } = useShipmentImpact(selectedDisruptionId === 'all' ? null : selectedDisruptionId);
 
-  const { addTrip } = useTrips();
+  const { addTrip, trips, refetch: refetchTrips, loading: tripsLoading } = useTrips();
   const toast = useToast();
 
   const [generating, setGenerating] = useState(false);
@@ -75,10 +75,10 @@ export default function RedeploymentPage() {
     notes: '',
   });
 
-  const loading = redeploymentLoading || impactsLoading;
+  const loading = redeploymentLoading || impactsLoading || tripsLoading;
 
   const handleRefreshAll = async () => {
-    await Promise.all([refetchRedeployment(), refetchImpacts()]);
+    await Promise.all([refetchRedeployment(), refetchImpacts(), refetchTrips()]);
     toast.info('Redeployment optimization & disruption conditions refreshed.');
   };
 
@@ -130,7 +130,7 @@ export default function RedeploymentPage() {
         `Corridor: ${routeId}. Triggered by ${item.disruptions?.title || 'slowdown'}.`
       );
       toast.success(`Schedule buffer (+${delayHours}h) applied to ${vehicle?.model || 'Vehicle'} on [${routeId}].`);
-      await Promise.all([refetchImpacts(), refetchRedeployment()]);
+      await Promise.all([refetchImpacts(), refetchRedeployment(), refetchTrips()]);
     } catch (err) {
       toast.error(`Failed to apply delay: ${err.message}`);
     } finally {
@@ -154,7 +154,7 @@ export default function RedeploymentPage() {
         altDetails.costAnalysis
       );
       toast.success(`Vehicle ${vehicle?.model || 'Asset'} rerouted to alternate bypass corridor [${altDetails.alternateRouteId}]! Cost delta: ${altDetails.costAnalysis?.formattedDelta || 'calculated'}. Removed from active disruptions.`);
-      await Promise.all([refetchImpacts(), refetchRedeployment()]);
+      await Promise.all([refetchImpacts(), refetchRedeployment(), refetchTrips()]);
     } catch (err) {
       toast.error(`Failed to reroute: ${err.message}`);
     } finally {
@@ -209,7 +209,7 @@ export default function RedeploymentPage() {
       toast.success(`Cargo successfully transferred to ${newVehicle.model} (${newVehicle.license_plate})! Net cost delta: ${redeployCostDelta?.formattedDelta || 'calculated'}. Removed from active disruptions.`);
       setReassignModalOpen(false);
       setDisruptedItemForReassign(null);
-      await Promise.all([refetchImpacts(), refetchRedeployment()]);
+      await Promise.all([refetchImpacts(), refetchRedeployment(), refetchTrips()]);
     } catch (err) {
       toast.error(`Failed to reassign vehicle: ${err.message}`);
     } finally {
@@ -283,7 +283,8 @@ export default function RedeploymentPage() {
 
   // ── ENRICHED DISRUPTED IMPACTS WITH CONDITION EVALUATION ────────────────────
   const enrichedImpacts = useMemo(() => {
-    return impacts
+    // 1. Existing DB impacts
+    const dbImpacts = impacts
       .filter(item => {
         const notes = (item.notes || '').toUpperCase();
         const tripNotes = (item.trips?.notes || '').toUpperCase();
@@ -320,7 +321,58 @@ export default function RedeploymentPage() {
           isResolved,
         };
       });
-  }, [impacts]);
+
+    // 2. Dynamically scan active fleet trips against disruptions so active disruptions always show affected trucks!
+    const coveredTripIds = new Set(dbImpacts.map(i => i.trip_id || i.trips?.id));
+    const activeDisruptionsList = selectedDisruptionId === 'all'
+      ? (disruptions || []).filter(d => d.status === 'active')
+      : (selectedDisruption ? [selectedDisruption] : (disruptions || []).filter(d => d.id === selectedDisruptionId && d.status === 'active'));
+
+    const dynamicImpacts = [];
+    const activeTrips = (trips || []).filter(t => t.status === 'Dispatched' || t.status === 'Draft');
+
+    for (const trip of activeTrips) {
+      if (coveredTripIds.has(trip.id)) continue;
+      const tripNotes = (trip.notes || '').toUpperCase();
+      if (
+        tripNotes.includes('REROUTED') ||
+        tripNotes.includes('REDEPLOYMENT') ||
+        tripNotes.includes('REASSIGNED') ||
+        tripNotes.includes('RESOLVED')
+      ) {
+        continue;
+      }
+
+      for (const d of activeDisruptionsList) {
+        if (isTripAffected(trip, d)) {
+          const condition = evaluateVehicleDisruptionCondition(trip, d, null);
+          const vehicle = trip.vehicles || {};
+          const routeId = trip.route_id || determineRouteId(trip.origin, trip.destination);
+
+          dynamicImpacts.push({
+            id: `dyn-${trip.id}-${d.id}`,
+            trip_id: trip.id,
+            disruption_id: d.id,
+            trips: trip,
+            disruptions: d,
+            impact_level: condition.category,
+            recommended_action: condition.decision,
+            notes: `Corridor transit affected by ${d.title}. Condition category: ${condition.categoryLabel}.`,
+            route_id: routeId,
+            condition,
+            vehicleModel: vehicle.model || 'Commercial Fleet Asset',
+            licensePlate: vehicle.license_plate || 'TRANSIT-NA',
+            vehicleType: vehicle.type || 'Heavy Carrier',
+            cargoWeight: trip.cargo_weight ? Number(trip.cargo_weight) : null,
+            isResolved: false,
+          });
+          break; // One active disruption match per trip
+        }
+      }
+    }
+
+    return [...dbImpacts, ...dynamicImpacts];
+  }, [impacts, trips, disruptions, selectedDisruptionId, selectedDisruption]);
 
   // Counts for Condition Categories
   const highCategoryCount = enrichedImpacts.filter(i => i.condition.category === 'high').length;
@@ -1283,6 +1335,7 @@ export default function RedeploymentPage() {
               searchPlaceholder="Search disrupted vehicles by model, plate, or route..."
               pagination={true}
               pageSize={10}
+              minWidth="1200px"
             />
           )}
         </div>
@@ -1318,6 +1371,7 @@ export default function RedeploymentPage() {
               searchPlaceholder="Search vehicles by model, plate, or region..."
               pagination={true}
               pageSize={10}
+              minWidth="850px"
             />
           )}
         </div>
@@ -1349,6 +1403,7 @@ export default function RedeploymentPage() {
               searchPlaceholder="Search saved proposals..."
               pagination={true}
               pageSize={10}
+              minWidth="850px"
             />
           )}
         </div>

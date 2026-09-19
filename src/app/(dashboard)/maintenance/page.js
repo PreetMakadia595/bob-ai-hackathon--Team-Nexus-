@@ -165,6 +165,7 @@ export default function MaintenancePage() {
           columns={columns}
           data={logs}
           loading={loading}
+          minWidth="750px"
           emptyComponent={<EmptyState type="maintenance" title="No maintenance logs" description="Log a maintenance event to track repairs and costs." action={{ label: '+ Log Maintenance', onClick: openAdd }} />}
           actions={<button className="btn btn-primary btn-sm" onClick={openAdd}><Plus size={14} /> Log Maintenance</button>}
         />

@@ -132,6 +132,7 @@ export default function FuelPage() {
           columns={columns}
           data={logs}
           loading={loading}
+          minWidth="750px"
           emptyComponent={<EmptyState type="fuel" title="No fuel logs yet" description="Track your fleet's fuel usage and expenses." action={{ label: '+ Log Fuel', onClick: openAdd }} />}
           actions={<button className="btn btn-primary btn-sm" onClick={openAdd}><Plus size={14} /> Log Fuel</button>}
         />

@@ -140,6 +140,7 @@ export default function DriversPage() {
           columns={columns}
           data={drivers}
           loading={loading}
+          minWidth="750px"
           emptyComponent={
             <EmptyState type="drivers" title="No drivers registered" description="Add your first driver to assign them to trips." action={{ label: '+ Add Driver', onClick: openAdd }} />
           }

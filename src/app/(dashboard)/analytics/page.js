@@ -261,8 +261,8 @@ export default function AnalyticsPage() {
         {vehicleData.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>No data for the selected period</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
+          <div style={{ overflowX: 'auto', borderRadius: '8px' }}>
+            <table className="data-table" style={{ minWidth: '700px', width: '100%' }}>
               <thead>
                 <tr>
                   <th>Vehicle</th>

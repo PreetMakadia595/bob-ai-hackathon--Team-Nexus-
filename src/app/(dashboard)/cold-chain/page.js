@@ -229,12 +229,19 @@ export default function ColdChainPage() {
         const ccs = r.cold_chain_shipments;
         const trip = ccs?.trips;
         return (
-          <div>
-            <div style={{ fontWeight: '600', fontSize: '13px', textTransform: 'capitalize' }}>
-              {ccs?.cargo_type || 'Cargo'} ({trip ? `${trip.origin} → ${trip.destination}` : 'Shipment'})
+          <div style={{ minWidth: '180px', maxWidth: '280px' }}>
+            <div style={{ fontWeight: '700', fontSize: '13px', textTransform: 'capitalize', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <span>{CARGO_PRESETS[ccs?.cargo_type]?.icon || '📦'}</span>
+              <span>{ccs?.cargo_type || 'Cargo'}</span>
+              {trip && <RouteBadge routeId={trip.route_id || determineRouteId(trip.origin, trip.destination)} />}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Range: {ccs?.required_min_temp}°C to {ccs?.required_max_temp}°C
+            {trip && (
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`${trip.origin} ➔ ${trip.destination}`}>
+                {trip.origin} ➔ {trip.destination}
+              </div>
+            )}
+            <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Range: <strong style={{ color: '#06b6d4' }}>{ccs?.required_min_temp}°C to {ccs?.required_max_temp}°C</strong>
             </div>
           </div>
         );
@@ -264,7 +271,7 @@ export default function ColdChainPage() {
       label: 'Impact Details',
       sortable: false,
       render: r => (
-        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '280px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', minWidth: '180px', maxWidth: '300px', lineHeight: 1.35, wordBreak: 'break-word' }}>
           {r.classification_notes}
         </div>
       ),
@@ -412,7 +419,7 @@ export default function ColdChainPage() {
             action={{ label: 'Register First Shipment', onClick: () => setShowAddModal(true) }}
           />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
             {shipments.map((s) => {
               const isSelected = selectedShipment?.id === s.id;
               const trip = s.trips;
@@ -436,14 +443,14 @@ export default function ColdChainPage() {
                     gap: '10px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '20px' }}>{icon}</span>
-                      <div>
-                        <div style={{ fontWeight: '700', fontSize: '14px', textTransform: 'capitalize', color: 'var(--text-primary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: '700', fontSize: '14px', textTransform: 'capitalize', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {s.cargo_type}
                         </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {s.regulatory_class || 'Standard Cold Chain'}
                         </div>
                       </div>
@@ -451,13 +458,30 @@ export default function ColdChainPage() {
                     <StatusBadge status={s.status} />
                   </div>
 
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <RouteBadge
-                      routeId={trip?.route_id || determineRouteId(trip?.origin, trip?.destination)}
-                      origin={trip?.origin}
-                      destination={trip?.destination}
-                    />
-                    {trip && <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{trip.origin} ➔ {trip.destination}</span>}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div>
+                      <RouteBadge
+                        routeId={trip?.route_id || determineRouteId(trip?.origin, trip?.destination)}
+                        origin={trip?.origin}
+                        destination={trip?.destination}
+                      />
+                    </div>
+                    {trip && (
+                      <span
+                        style={{
+                          fontSize: '11.5px',
+                          fontWeight: '600',
+                          color: 'var(--text-secondary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: 'block',
+                        }}
+                        title={`${trip.origin} ➔ ${trip.destination}`}
+                      >
+                        {trip.origin} ➔ {trip.destination}
+                      </span>
+                    )}
                   </div>
 
                   <div style={{
@@ -602,6 +626,7 @@ export default function ColdChainPage() {
             searchPlaceholder="Search excursions by cargo, route, or severity..."
             pagination={true}
             pageSize={10}
+            minWidth="1050px"
           />
         )}
       </div>

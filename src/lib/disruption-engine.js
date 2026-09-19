@@ -157,6 +157,10 @@ export function isTripAffected(trip, disruption) {
   const disruptionRoute = (disruption.route_id || '').toLowerCase();
   const tripRoute = (trip.route_id || determineRouteId(trip.origin, trip.destination)).toLowerCase();
 
+  const resolvedRoute = getRouteById(tripRoute) || getRouteById(determineRouteId(trip.origin, trip.destination));
+  const routeOriginRegion = (resolvedRoute?.originRegion || '').toLowerCase();
+  const routeDestRegion = (resolvedRoute?.destRegion || '').toLowerCase();
+
   let corridorMatches = false;
   // Direct RouteID match
   if (disruptionRoute && tripRoute && disruptionRoute === tripRoute) {
@@ -167,7 +171,13 @@ export function isTripAffected(trip, disruption) {
     corridorMatches = origin.includes(disruptionRegion) ||
                       destination.includes(disruptionRegion) ||
                       disruptionRegion.includes(origin) ||
-                      disruptionRegion.includes(destination);
+                      disruptionRegion.includes(destination) ||
+                      routeOriginRegion === disruptionRegion ||
+                      routeDestRegion === disruptionRegion ||
+                      (resolvedRoute?.cities || []).some(c => {
+                        const lc = c.toLowerCase();
+                        return origin.includes(lc) || destination.includes(lc);
+                      });
   }
 
   if (!corridorMatches) {

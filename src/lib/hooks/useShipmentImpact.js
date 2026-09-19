@@ -168,11 +168,13 @@ export function useShipmentImpact(disruptionId = null) {
     }
 
     // 3. Remove vehicle from active disruption impacts
-    if (impactId) {
+    if (impactId && !String(impactId).startsWith('dyn-')) {
       await supabase
         .from('shipment_disruption_impact')
         .delete()
         .eq('id', impactId);
+      setImpacts(prev => prev.filter(i => i.id !== impactId));
+    } else if (impactId) {
       setImpacts(prev => prev.filter(i => i.id !== impactId));
     }
 
@@ -199,11 +201,13 @@ export function useShipmentImpact(disruptionId = null) {
     if (tripErr) throw tripErr;
 
     // Remove vehicle from active disruption impacts
-    if (impactId) {
+    if (impactId && !String(impactId).startsWith('dyn-')) {
       await supabase
         .from('shipment_disruption_impact')
         .delete()
         .eq('id', impactId);
+      setImpacts(prev => prev.filter(i => i.id !== impactId));
+    } else if (impactId) {
       setImpacts(prev => prev.filter(i => i.id !== impactId));
     }
 
@@ -225,7 +229,7 @@ export function useShipmentImpact(disruptionId = null) {
 
     if (tripErr) throw tripErr;
 
-    if (impactId) {
+    if (impactId && !String(impactId).startsWith('dyn-')) {
       await supabase
         .from('shipment_disruption_impact')
         .update({
